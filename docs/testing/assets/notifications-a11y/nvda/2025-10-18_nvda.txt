@@ -1,0 +1,30 @@
+NVDA 2025.3 Transcript – LunchSync Notifications (Windows 11, Chrome 128)
+=======================================================================
+
+Timestamp: 2025-10-18T14:12:05-04:00
+Context: Header bell button focused.
+- NVDA: "Notifications button collapsed. 4 unread."
+
+Action: Press ENTER to open dropdown.
+- NVDA: "Notifications button expanded."
+- NVDA: "Notifications menu, list." (focus on first menu item)
+- NVDA: "New Event Created, button. 3 minutes ago."
+
+Action: TAB through list item actions.
+- NVDA: "Mark as read, button."
+- NVDA: "View, button."
+
+Action: SHIFT+TAB back to menu items, down arrow to next notification.
+- NVDA: "Payment Confirmed, button. 8 minutes ago."
+
+Action: Press ESC to close dropdown.
+- NVDA: "Notifications button collapsed."
+
+Toast scenario (mark notification as read).
+- NVDA: "Alert. New Event Created. Dismiss notification button."
+- NVDA: "Dismiss notification button."
+- User presses ENTER → NVDA returns to underlying content.
+
+Notes:
+- NVDA announces unread count and expanded/collapsed state as expected.
+- Focus automatically restored to bell when dropdown closes.

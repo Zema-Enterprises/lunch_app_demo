@@ -1,0 +1,12 @@
+Run: npm run test:realtime:perf
+Date: 2025-10-18T22:41Z
+
+Telemetry Summary
+- Polling vs Realtime Query Metrics: completed in 1.46s (Vitest suite duration 1.00s)
+- Realtime Integration SLA: completed in 1.30s (Vitest suite duration 0.89s)
+- React Router future flags: no new warnings emitted during this run (tracked separately for v7 upgrade plan)
+
+Notes
+- Refer to vitest output for assertion details covering polling suppression and realtime cache hydration.
+- Honeycomb dashboard import template: docs/testing/assets/notifications-telemetry/honeycomb-dashboard.json
+- PagerDuty alert configuration: docs/testing/assets/notifications-telemetry/pagerduty-alerts.yaml

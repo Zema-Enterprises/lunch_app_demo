@@ -1,0 +1,120 @@
+{
+  "name": "LunchSync – Notifications Realtime Overview",
+  "layout": "grid",
+  "queries": [
+    {
+      "title": "Realtime Delivery p95 (ms)",
+      "query": {
+        "time_range": "24h",
+        "granularity": "5m",
+        "calculations": [
+          {
+            "op": "PERCENTILE",
+            "column": "latencyMs",
+            "percentile": 95
+          }
+        ],
+        "filters": [
+          {
+            "column": "metric",
+            "op": "=",
+            "value": "notifications_ws_delivery_ms"
+          }
+        ],
+        "group_by": ["environment"]
+      },
+      "visualization": "line"
+    },
+    {
+      "title": "Active WS Connections",
+      "query": {
+        "time_range": "1h",
+        "granularity": "1m",
+        "calculations": [
+          {
+            "op": "LAST",
+            "column": "activeConnections"
+          }
+        ],
+        "filters": [
+          {
+            "column": "metric",
+            "op": "=",
+            "value": "notifications_ws_connected"
+          }
+        ],
+        "group_by": ["environment"]
+      },
+      "visualization": "line"
+    },
+    {
+      "title": "Reconnect Success Rate",
+      "query": {
+        "time_range": "24h",
+        "granularity": "5m",
+        "calculations": [
+          {
+            "op": "RATE",
+            "column": "reconnectSuccess"
+          }
+        ],
+        "filters": [
+          {
+            "column": "metric",
+            "op": "=",
+            "value": "notifications_ws_reconnect_success"
+          }
+        ],
+        "group_by": ["environment"]
+      },
+      "visualization": "area"
+    },
+    {
+      "title": "Realtime vs Polling Latency Comparison",
+      "query": {
+        "time_range": "24h",
+        "granularity": "5m",
+        "calculations": [
+          {
+            "op": "PERCENTILE",
+            "column": "latencyMs",
+            "percentile": 95
+          }
+        ],
+        "filters": [
+          {
+            "column": "metric",
+            "op": "IN",
+            "value": [
+              "notifications_ws_delivery_ms",
+              "notifications_poll_delivery_ms"
+            ]
+          }
+        ],
+        "group_by": ["metric"]
+      },
+      "visualization": "column"
+    },
+    {
+      "title": "Delivery Outcomes by Channel",
+      "query": {
+        "time_range": "24h",
+        "granularity": "15m",
+        "calculations": [
+          {
+            "op": "COUNT"
+          }
+        ],
+        "filters": [
+          {
+            "column": "metric",
+            "op": "=",
+            "value": "notification_delivery"
+          }
+        ],
+        "group_by": ["channel", "status"]
+      },
+      "visualization": "stacked_column"
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Companies (Multi-tenant)
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  restaurants Restaurant[]
+  events      Event[]
+  deliveryReceipts NotificationDeliveryReceipt[]
+  pushSubscriptions PushSubscription[]
+}
+
+// Users
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(USER)
+  companyId String
+  createdAt DateTime @default(now())
+
+  company              Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdEvents        Event[]                   @relation("EventCreator")
+  orders               Order[]
+  participants         EventParticipant[]
+  notifications        NotificationEvent[]
+  notificationSettings UserNotificationSettings?
+  deliveryReceipts     NotificationDeliveryReceipt[]
+  pushSubscriptions    PushSubscription[]
+}
+
+// Restaurants
+model Restaurant {
+  id           String   @id @default(cuid())
+  name         String
+  cuisine      String
+  openTime     String
+  closeTime    String
+  deliveryTime String
+  hasMenu      Boolean  @default(false)
+  imageUrl     String?
+  companyId    String
+  createdAt    DateTime @default(now())
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  menuItems MenuItem[]
+  events    Event[]
+}
+
+// Menu Items
+model MenuItem {
+  id           String  @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  category     String
+  available    Boolean @default(true)
+  restaurantId String
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+}
+
+// Events
+enum EventStatus {
+  OPEN
+  CLOSED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  EVENT_CREATOR
+  INDIVIDUAL
+  COMPANY_EXPENSE
+}
+
+model Event {
+  id                String        @id @default(cuid())
+  title             String
+  description       String?
+  deliveryLocation  String
+  orderDeadline     DateTime
+  paymentMethod     PaymentMethod @default(EVENT_CREATOR)
+  status            EventStatus   @default(OPEN)
+  createdById       String
+  restaurantId      String
+  companyId         String
+  createdAt         DateTime      @default(now())
+  deliveredAt       DateTime? // When food was actually delivered
+  estimatedDelivery String? // "45-60 minutes" from restaurant
+
+  createdBy     User                @relation("EventCreator", fields: [createdById], references: [id])
+  restaurant    Restaurant          @relation(fields: [restaurantId], references: [id])
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  participants  EventParticipant[]
+  orders        Order[]
+  notifications NotificationEvent[]
+}
+
+// Event Participants
+model EventParticipant {
+  id       String   @id @default(cuid())
+  userId   String
+  eventId  String
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+// Orders
+model Order {
+  id               String   @id @default(cuid())
+  customOrder      String?
+  totalAmount      Float?
+  paymentConfirmed Boolean  @default(false)
+  userId           String
+  eventId          String
+  createdAt        DateTime @default(now())
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  notifications NotificationEvent[]
+
+  @@unique([userId, eventId])
+}
+
+// Order Items (for menu-based orders)
+model OrderItem {
+  id         String @id @default(cuid())
+  quantity   Int
+  price      Float
+  orderId    String
+  menuItemId String
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+// Notification Events (Phase 4)
+enum NotificationType {
+  EVENT_CREATED
+  USER_JOINED_EVENT
+  ORDER_PLACED
+  ORDER_UPDATED
+  EVENT_CLOSING_SOON
+  EVENT_CLOSED
+  PAYMENT_CONFIRMED
+  EVENT_COMPLETED
+  EVENT_DELIVERED
+}
+
+enum NotificationDeliveryChannel {
+  REALTIME
+  PUSH
+  EMAIL
+}
+
+enum NotificationDeliveryStatus {
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model NotificationEvent {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  userId    String // Recipient
+  eventId   String? // Related event
+  orderId   String? // Related order
+  read      Boolean          @default(false)
+  sentEmail Boolean          @default(false)
+  sentInApp Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryReceipts NotificationDeliveryReceipt[]
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model NotificationDeliveryReceipt {
+  id             String                     @id @default(cuid())
+  notificationId String
+  companyId      String
+  userId         String
+  channel        NotificationDeliveryChannel
+  status         NotificationDeliveryStatus @default(SUCCESS)
+  latencyMs      Int
+  deliveredAt    DateTime
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime                   @default(now())
+
+  notification NotificationEvent @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, deliveredAt])
+  @@index([notificationId])
+  @@index([userId, channel])
+}
+
+model PushSubscription {
+  id             String   @id @default(cuid())
+  endpoint       String   @unique
+  keys           Json
+  expirationTime DateTime?
+  userAgent      String?
+  userId         String
+  companyId      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, userId])
+}
+
+// User Notification Settings (Phase 4)
+model UserNotificationSettings {
+  id                          String  @id @default(cuid())
+  userId                      String  @unique
+  emailEnabled                Boolean @default(true)
+  inAppEnabled                Boolean @default(true)
+  notifyOnEventCreated        Boolean @default(false)
+  notifyOnOrderPlaced         Boolean @default(true)
+  notifyOnDeadlineApproaching Boolean @default(true)
+  notifyOnEventClosed         Boolean @default(true)
+  notifyOnPaymentConfirmed    Boolean @default(true)
+  notifyOnEventCompleted      Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

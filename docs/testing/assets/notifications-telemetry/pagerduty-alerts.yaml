@@ -1,0 +1,57 @@
+alerts:
+  - name: notifications-realtime-latency-p95
+    description: >
+      Triggered when realtime delivery latency exceeds 2s p95 for five consecutive minutes.
+    dataset: lunchsync-notifications
+    query:
+      metric: notifications_ws_delivery_ms
+      calculation: percentile
+      percentile: 95
+      time_range: 5m
+      filters:
+        - column: environment
+          op: =
+          value: production
+    threshold:
+      op: ">"
+      value: 2000
+      duration: 5m
+    escalation_policy: platform-oncall
+
+  - name: notifications-realtime-connections-drop
+    description: >
+      Triggers when active websocket connections drop by more than 20% vs. baseline.
+    dataset: lunchsync-notifications
+    query:
+      metric: notifications_ws_connected
+      calculation: last
+      time_range: 10m
+      filters:
+        - column: environment
+          op: =
+          value: production
+    threshold:
+      op: "<"
+      value: "{{baseline_active_connections * 0.8}}"
+      duration: 10m
+    notes: >
+      Replace baseline_active_connections placeholder with rolling median for the tenant cohort.
+    escalation_policy: platform-oncall
+
+  - name: notifications-realtime-reconnect-success
+    description: >
+      Fires when reconnect success ratio dips below 99% over a 10-minute window.
+    dataset: lunchsync-notifications
+    query:
+      metric: notifications_ws_reconnect_success
+      calculation: average
+      time_range: 10m
+      filters:
+        - column: environment
+          op: =
+          value: production
+    threshold:
+      op: "<"
+      value: 0.99
+      duration: 10m
+    escalation_policy: platform-oncall

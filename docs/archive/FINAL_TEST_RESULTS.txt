@@ -1,0 +1,13 @@
+
+> lunchsync-backend@1.0.0 test
+> jest
+
+PASS src/utils/__tests__/sanitize.test.ts
+PASS src/modules/restaurants/__tests__/restaurants.controller.test.ts
+PASS src/modules/auth/__tests__/auth.controller.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       44 passed, 44 total
+Snapshots:   0 total
+Time:        1.75 s, estimated 2 s
+Ran all test suites.

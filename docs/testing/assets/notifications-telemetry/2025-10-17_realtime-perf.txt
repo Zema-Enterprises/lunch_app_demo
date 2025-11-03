@@ -1,0 +1,9 @@
+Run: npm run test:realtime:perf
+Date: 2025-10-17T18:14Z
+
+Highlights
+- Polling vs realtime query metrics suite passed (NotificationBell cache sharing, polling interval checks).
+- Realtime integration SLA suite passed (fallback suppression, handshake coverage).
+- React Router future warnings noted (planned for v7 adoption).
+
+Refer to vitest output for detailed timing; ensure Honeycomb dashboard (honeycomb-dashboard.json) is imported for visual telemetry.
