@@ -133,10 +133,13 @@ describe('createNotificationsServer', () => {
     const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(new Date('2025-10-19T12:00:02.000Z').getTime());
     const notificationPayload = { id: 'notif-1', createdAt: '2025-10-19T12:00:00.000Z' };
     server.emitNotification('company_5', notificationPayload, { userId: 'user_1' });
-    expect(namespace.to).toHaveBeenNthCalledWith(1, 'company:company_5');
-    expect(namespace.emit).toHaveBeenNthCalledWith(1, NOTIFICATION_CREATED_EVENT, notificationPayload);
-    expect(namespace.to).toHaveBeenNthCalledWith(2, 'user:user_1');
-    expect(namespace.emit).toHaveBeenNthCalledWith(2, NOTIFICATION_CREATED_EVENT, notificationPayload);
+    
+    // When userId is specified, emit ONLY to user room (not company room) to prevent duplicates
+    expect(namespace.to).toHaveBeenCalledTimes(1);
+    expect(namespace.to).toHaveBeenCalledWith('user:user_1');
+    expect(namespace.emit).toHaveBeenCalledTimes(1);
+    expect(namespace.emit).toHaveBeenCalledWith(NOTIFICATION_CREATED_EVENT, notificationPayload);
+    
     expect(recordRealtimeDelivery).toHaveBeenCalledWith(
       expect.objectContaining({
         companyId: 'company_5',

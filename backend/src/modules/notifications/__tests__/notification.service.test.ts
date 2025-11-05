@@ -66,7 +66,7 @@ describe('Notification Service', () => {
       expect(settings.userId).toBe(userId);
       expect(settings.emailEnabled).toBe(true);
       expect(settings.inAppEnabled).toBe(true);
-      expect(settings.notifyOnEventCreated).toBe(false); // Default: don't notify on all events
+      expect(settings.notifyOnEventCreated).toBe(true); // Default: notify on event creation
       expect(settings.notifyOnOrderPlaced).toBe(true);
       expect(settings.notifyOnPaymentConfirmed).toBe(true);
     });

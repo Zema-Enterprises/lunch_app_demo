@@ -53,9 +53,20 @@ const buildBroadcastPayload = (notification: NotificationWithRelations) => {
 
 export const broadcastNotificationCreated = (notification: NotificationWithRelations) => {
   const companyId = notification.user?.companyId;
-  if (!companyId) return;
+  if (!companyId) {
+    console.log('[Socket.IO] No companyId for notification:', notification.id);
+    return;
+  }
 
   const payload = buildBroadcastPayload(notification);
+
+  console.log('[Socket.IO] Emitting notification:', {
+    notificationId: notification.id,
+    type: notification.type,
+    userId: notification.userId,
+    companyId,
+    event: NOTIFICATION_CREATED_EVENT,
+  });
 
   emitRealtimeNotification(companyId, { companyId, ...payload }, {
     userId: notification.userId,

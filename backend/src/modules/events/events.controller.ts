@@ -179,8 +179,12 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
     });
 
     // Send EVENT_CREATED notifications to company users (based on preferences)
+    // IMPORTANT: Exclude the event creator - users should NOT receive notifications for their own actions
     const companyUsers = await prisma.user.findMany({
-      where: { companyId: req.user!.companyId },
+      where: { 
+        companyId: req.user!.companyId,
+        id: { not: req.user!.userId } // Exclude creator
+      },
       select: { id: true },
     });
     
@@ -475,12 +479,14 @@ export const joinEvent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Notify event creator that someone joined
-    await createNotificationEvent({
-      type: 'USER_JOINED_EVENT',
-      userId: event.createdById,
-      eventId: id,
-    });
+    // Notify event creator that someone joined (but NOT if creator joins their own event)
+    if (req.user!.userId !== event.createdById) {
+      await createNotificationEvent({
+        type: 'USER_JOINED_EVENT',
+        userId: event.createdById,
+        eventId: id,
+      });
+    }
 
     return res.status(201).json({ data: participant });
   } catch (error) {

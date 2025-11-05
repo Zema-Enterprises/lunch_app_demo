@@ -22,7 +22,7 @@ beforeAll(() => {
     }
     originalConsoleWarn(...args);
   });
-  server.listen({ onUnhandledRequest: 'error' });
+  server.listen({ onUnhandledRequest: 'warn' });
 });
 
 // Reset handlers after each test

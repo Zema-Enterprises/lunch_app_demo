@@ -32,7 +32,7 @@ export async function getUserNotificationSettings(userId: string) {
         userId,
         emailEnabled: true,
         inAppEnabled: true,
-        notifyOnEventCreated: false,
+        notifyOnEventCreated: true, // Users should know about new events
         notifyOnOrderPlaced: true,
         notifyOnDeadlineApproaching: true,
         notifyOnEventClosed: true,

@@ -4,6 +4,7 @@ import restaurantRoutes from '../restaurants.routes';
 import prisma from '../../../config/database';
 import { generateToken } from '../../../utils/jwt';
 import { authMiddleware } from '../../../middleware/auth';
+import { getData, getErrorMessage } from '../../../test/helpers/response-utils';
 
 // Create test app
 const app = express();
@@ -87,12 +88,13 @@ describe('Restaurants Controller', () => {
         .send(restaurantData)
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.name).toBe(restaurantData.name);
-      expect(response.body.cuisine).toBe(restaurantData.cuisine);
-      expect(response.body.companyId).toBe(testCompanyId);
+      const restaurant = getData(response);
+      expect(restaurant).toHaveProperty('id');
+      expect(restaurant.name).toBe(restaurantData.name);
+      expect(restaurant.cuisine).toBe(restaurantData.cuisine);
+      expect(restaurant.companyId).toBe(testCompanyId);
 
-      testRestaurantId = response.body.id;
+      testRestaurantId = restaurant.id;
     });
 
     it('should sanitize XSS in restaurant name', async () => {
@@ -109,8 +111,9 @@ describe('Restaurants Controller', () => {
         })
         .expect(201);
 
-      expect(response.body.name).not.toContain('<script>');
-      expect(response.body.name).toContain('Clean Restaurant');
+      const restaurant = getData(response);
+      expect(restaurant.name).not.toContain('<script>');
+      expect(restaurant.name).toContain('Clean Restaurant');
     });
 
     it('should not create restaurant without authentication', async () => {
@@ -135,7 +138,9 @@ describe('Restaurants Controller', () => {
         })
         .expect(400);
 
-      expect(response.body).toHaveProperty('error');
+      // Validation errors return { errors: [...] } array
+      expect(response.body).toHaveProperty('errors');
+      expect(Array.isArray(response.body.errors)).toBe(true);
     });
 
     it('should enforce max length validation', async () => {
@@ -152,7 +157,9 @@ describe('Restaurants Controller', () => {
         })
         .expect(400);
 
-      expect(response.body).toHaveProperty('error');
+      // Validation errors return { errors: [...] } array
+      expect(response.body).toHaveProperty('errors');
+      expect(Array.isArray(response.body.errors)).toBe(true);
     });
   });
 
@@ -163,10 +170,11 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
+      const restaurants = getData(response);
+      expect(Array.isArray(restaurants)).toBe(true);
+      expect(restaurants.length).toBeGreaterThan(0);
       // All restaurants should belong to test company
-      response.body.forEach((restaurant: any) => {
+      restaurants.forEach((restaurant: any) => {
         expect(restaurant.companyId).toBe(testCompanyId);
       });
     });
@@ -187,9 +195,10 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(response.body.id).toBe(testRestaurantId);
-      expect(response.body).toHaveProperty('name');
-      expect(response.body).toHaveProperty('cuisine');
+      const restaurant = getData(response);
+      expect(restaurant.id).toBe(testRestaurantId);
+      expect(restaurant).toHaveProperty('name');
+      expect(restaurant).toHaveProperty('cuisine');
     });
 
     it('should return 404 for non-existent restaurant', async () => {
@@ -198,7 +207,8 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
 
-      expect(response.body).toHaveProperty('error');
+      // Error responses return { message: '...' }
+      expect(response.body).toHaveProperty('message');
     });
   });
 
@@ -251,11 +261,12 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
-      expect(response.body[0]).toHaveProperty('name');
-      expect(response.body[0]).toHaveProperty('price');
-      expect(response.body[0].restaurantId).toBe(menuTestRestaurantId);
+      const menuItems = getData(response);
+      expect(Array.isArray(menuItems)).toBe(true);
+      expect(menuItems.length).toBeGreaterThan(0);
+      expect(menuItems[0]).toHaveProperty('name');
+      expect(menuItems[0]).toHaveProperty('price');
+      expect(menuItems[0].restaurantId).toBe(menuTestRestaurantId);
     });
 
     it('should return empty array for restaurant with no menu', async () => {
@@ -276,19 +287,20 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(0);
+      const menuItems = getData(response);
+      expect(Array.isArray(menuItems)).toBe(true);
+      expect(menuItems.length).toBe(0);
 
       // Cleanup
       await prisma.restaurant.delete({ where: { id: emptyRestaurant.id } });
     });
 
     it('should not get menu from another company', async () => {
-      // Create another company and restaurant
+      // Create another company and restaurant with unique domain
       const otherCompany = await prisma.company.create({
         data: {
           name: `Other Company ${Date.now()}`,
-          domain: 'other.com',
+          domain: `other-${Date.now()}.com`, // Unique domain
           slug: `other-slug-${Date.now()}`,
         },
       });
@@ -309,7 +321,8 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
 
-      expect(response.body).toHaveProperty('error');
+      // Error responses return { message: '...' }
+      expect(response.body).toHaveProperty('message');
 
       // Cleanup
       await prisma.restaurant.delete({ where: { id: otherRestaurant.id } });
@@ -342,8 +355,9 @@ describe('Restaurants Controller', () => {
         .send(updateData)
         .expect(200);
 
-      expect(response.body.name).toBe(updateData.name);
-      expect(response.body.cuisine).toBe(updateData.cuisine);
+      const updated = getData(response);
+      expect(updated.name).toBe(updateData.name);
+      expect(updated.cuisine).toBe(updateData.cuisine);
 
       // Cleanup
       await prisma.restaurant.delete({ where: { id: restaurant.id } });
@@ -370,8 +384,9 @@ describe('Restaurants Controller', () => {
         })
         .expect(200);
 
-      expect(response.body.name).not.toContain('<img');
-      expect(response.body.name).not.toContain('onerror');
+      const updated = getData(response);
+      expect(updated.name).not.toContain('<img');
+      expect(updated.name).not.toContain('onerror');
 
       // Cleanup
       await prisma.restaurant.delete({ where: { id: restaurant.id } });
@@ -384,7 +399,9 @@ describe('Restaurants Controller', () => {
         .send({ name: 'Update' })
         .expect(404);
 
+      // Error responses return { error: '...' }
       expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toBe('Restaurant not found');
     });
   });
 
@@ -420,7 +437,8 @@ describe('Restaurants Controller', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
 
-      expect(response.body).toHaveProperty('error');
+      // Error responses return { message: '...' }
+      expect(response.body).toHaveProperty('message');
     });
   });
 });

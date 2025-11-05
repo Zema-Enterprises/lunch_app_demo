@@ -64,7 +64,7 @@ describe('Phase 0: Test Infrastructure Verification', () => {
     it('should create an employee user', async () => {
       const employee = await createEmployee(testData.company.id);
 
-      expect(employee.role).toBe('EMPLOYEE');
+      expect(employee.role).toBe('USER'); // Employees have USER role
       expect(employee.companyId).toBe(testData.company.id);
     });
   });
@@ -251,7 +251,7 @@ describe('Phase 0: Test Infrastructure Verification', () => {
       expect(testData.admin.role).toBe('ADMIN');
       expect(testData.employees).toHaveLength(3);
       testData.employees.forEach((employee: any) => {
-        expect(employee.role).toBe('EMPLOYEE');
+        expect(employee.role).toBe('USER'); // Employees have USER role
         expect(employee).toHaveProperty('token');
       });
     });

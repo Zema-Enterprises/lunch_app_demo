@@ -206,6 +206,68 @@ describe('Event Management Flow Integration Tests', () => {
         }
       });
     });
+
+    describe('Notifications', () => {
+      it('should NOT send notification to event creator', async () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Create event as admin
+        await authenticatedRequest(app, testData.admin.token)
+          .post('/api/events')
+          .send({
+            title: 'Test Notification Event',
+            orderDeadline: tomorrow.toISOString(),
+            restaurantId: restaurant.id,
+          });
+
+        // Check admin's notifications
+        const notificationsResponse = await authenticatedRequest(app, testData.admin.token)
+          .get('/api/notifications');
+
+        assertSuccess(notificationsResponse);
+        
+        // Admin should NOT have received EVENT_CREATED notification for their own event
+        const eventCreatedNotifications = notificationsResponse.body.data.filter(
+          (n: any) => n.type === 'EVENT_CREATED' && n.event?.title === 'Test Notification Event'
+        );
+        
+        expect(eventCreatedNotifications).toHaveLength(0);
+      });
+
+      it('should send notification to other company users when event is created', async () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Create event as admin
+        const eventResponse = await authenticatedRequest(app, testData.admin.token)
+          .post('/api/events')
+          .send({
+            title: 'Shared Event Notification Test',
+            orderDeadline: tomorrow.toISOString(),
+            restaurantId: restaurant.id,
+          });
+
+        assertSuccess(eventResponse);
+        const eventId = eventResponse.body.data.id;
+
+        // Add small delay to ensure notifications are created
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Check employee's notifications (should have received it)
+        const notificationsResponse = await authenticatedRequest(app, testData.employees[0].token)
+          .get('/api/notifications');
+
+        assertSuccess(notificationsResponse);
+        
+        // Employee should have received EVENT_CREATED notification
+        const eventCreatedNotifications = notificationsResponse.body.data.filter(
+          (n: any) => n.type === 'EVENT_CREATED' && n.eventId === eventId
+        );
+        
+        expect(eventCreatedNotifications.length).toBeGreaterThan(0);
+      });
+    });
   });
 
   describe('Event Retrieval', () => {
@@ -663,6 +725,57 @@ describe('Event Management Flow Integration Tests', () => {
 
         assertSuccess(response);
       });
+
+      describe('Notifications', () => {
+        it('should notify event creator when someone joins', async () => {
+          // Employee joins the event
+          const joinResponse = await authenticatedRequest(app, testData.employees[0].token)
+            .post(`/api/events/${openEvent.id}/join`);
+
+          assertSuccess(joinResponse);
+
+          // Add small delay to ensure notifications are created
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Check creator's notifications (admin who created the event)
+          const notificationsResponse = await authenticatedRequest(app, testData.admin.token)
+            .get('/api/notifications');
+
+          assertSuccess(notificationsResponse);
+
+          // Creator should have received USER_JOINED_EVENT notification
+          const joinNotifications = notificationsResponse.body.data.filter(
+            (n: any) => n.type === 'USER_JOINED_EVENT' && n.eventId === openEvent.id
+          );
+
+          expect(joinNotifications.length).toBeGreaterThan(0);
+        });
+
+        it('should NOT notify the user who joined', async () => {
+          // Employee joins the event
+          const joinResponse = await authenticatedRequest(app, testData.employees[0].token)
+            .post(`/api/events/${openEvent.id}/join`);
+
+          assertSuccess(joinResponse);
+
+          // Add small delay to ensure notifications are created
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Check employee's own notifications
+          const notificationsResponse = await authenticatedRequest(app, testData.employees[0].token)
+            .get('/api/notifications');
+
+          assertSuccess(notificationsResponse);
+
+          // Employee should NOT have received notification for their own join action
+          const joinNotifications = notificationsResponse.body.data.filter(
+            (n: any) => n.type === 'USER_JOINED_EVENT' && n.eventId === openEvent.id
+          );
+
+          expect(joinNotifications.length).toBe(0);
+        });
+      });
+
 
       it('should reject joining closed event', async () => {
         // Close the event first

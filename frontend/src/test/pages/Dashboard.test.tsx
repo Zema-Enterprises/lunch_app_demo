@@ -20,6 +20,7 @@ vi.mock('@/lib/api/hooks', () => ({
   useEvents: vi.fn(() => ({ data: [], isLoading: false })),
   useRestaurants: vi.fn(() => ({ data: [], isLoading: false })),
   useUserStats: vi.fn(() => ({ data: { thisWeekOrders: 0, totalSpent: 0 }, isLoading: false })),
+  useNotificationAnalytics: vi.fn(() => ({ data: null, isLoading: false })),
 }));
 
 const renderDashboard = () => {

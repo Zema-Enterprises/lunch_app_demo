@@ -746,8 +746,14 @@ describe('Concurrent Operations E2E Tests', () => {
         [creatorId, participant1Id, participant2Id, participant3Id].includes(n.userId)
       )).toBe(true);
 
-      // All company 2 notifications should be for company 2 users
-      expect(company2Notifications.every((n: any) => n.userId === company2AdminId)).toBe(true);
+      // Company 2 has admin + 1 employee
+      // When admin creates event, employee gets notified (but admin doesn't)
+      // So company2Notifications should only contain notifications for the employee
+      const company2EmployeeId = company2Data.employees?.[0]?.id;
+      expect(company2EmployeeId).toBeDefined();
+      expect(company2Notifications.every((n: any) => 
+        n.userId === company2EmployeeId
+      )).toBe(true);
 
       // Cleanup company 2
       await prisma.notificationEvent.deleteMany({ where: { user: { companyId: company2Id } } });

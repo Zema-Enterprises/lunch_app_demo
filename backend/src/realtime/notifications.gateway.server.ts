@@ -108,6 +108,12 @@ export const createNotificationsServer = async ({
       const handshake = buildHandshakePayload(user, handshakeOverrides);
       const rooms = deriveRoomNames(user);
 
+      console.log('[Socket.IO] User connecting, joining rooms:', {
+        userId: user.id,
+        companyId: user.companyId,
+        rooms: [rooms.companyRoom, rooms.userRoom],
+      });
+
       socket.join(rooms.companyRoom);
       socket.join(rooms.userRoom);
       socket.emit(GATEWAY_HANDSHAKE_EVENT, handshake);
@@ -156,22 +162,21 @@ export const createNotificationsServer = async ({
     },
     emitNotification: (companyId: string, payload: unknown, options?: { userId?: string; event?: string }) => {
       const eventName = options?.event ?? NOTIFICATION_CREATED_EVENT;
-      namespace.to(`company:${companyId}`).emit(eventName, payload);
-
       const notificationId =
         typeof payload === 'object' && payload !== null ? (payload as any).id : undefined;
       const latencyMs = deriveLatencyMs(payload);
 
-      recordRealtimeDelivery({
-        companyId,
-        notificationId,
-        eventName,
-        latencyMs,
-        target: 'company',
-      });
-
+      // If targeting a specific user, only emit to their room (not company room)
+      // This prevents duplicate delivery since user is already in company room
       if (options?.userId) {
-        namespace.to(`user:${options.userId}`).emit(eventName, payload);
+        const targetRoom = `user:${options.userId}`;
+        console.log('[Socket.IO Gateway] Emitting to user room:', {
+          targetRoom,
+          eventName,
+          notificationId,
+          companyId,
+        });
+        namespace.to(targetRoom).emit(eventName, payload);
         recordRealtimeDelivery({
           companyId,
           userId: options.userId,
@@ -179,6 +184,22 @@ export const createNotificationsServer = async ({
           eventName,
           latencyMs,
           target: 'user',
+        });
+      } else {
+        // Broadcast to entire company if no specific user targeted
+        const targetRoom = `company:${companyId}`;
+        console.log('[Socket.IO Gateway] Emitting to company room:', {
+          targetRoom,
+          eventName,
+          notificationId,
+        });
+        namespace.to(targetRoom).emit(eventName, payload);
+        recordRealtimeDelivery({
+          companyId,
+          notificationId,
+          eventName,
+          latencyMs,
+          target: 'company',
         });
       }
     },

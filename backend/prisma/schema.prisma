@@ -253,7 +253,7 @@ model UserNotificationSettings {
   userId                      String  @unique
   emailEnabled                Boolean @default(true)
   inAppEnabled                Boolean @default(true)
-  notifyOnEventCreated        Boolean @default(false)
+  notifyOnEventCreated        Boolean @default(true)
   notifyOnOrderPlaced         Boolean @default(true)
   notifyOnDeadlineApproaching Boolean @default(true)
   notifyOnEventClosed         Boolean @default(true)
