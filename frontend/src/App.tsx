@@ -10,6 +10,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Events = lazy(() => import('./pages/Events'));
+const EventDetail = lazy(() => import('./pages/EventDetail'));
 const Restaurants = lazy(() => import('./pages/Restaurants'));
 const RestaurantDetails = lazy(() => import('./pages/RestaurantDetails'));
 const MenuManagement = lazy(() => import('./pages/MenuManagement'));
@@ -34,7 +35,11 @@ const PageLoader = () => (
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, hasHydrated } = useAuthStore();
+
+  if (!hasHydrated) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
@@ -74,6 +79,7 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="events" element={<Events />} />
+              <Route path="events/:id" element={<EventDetail />} />
               <Route path="restaurants" element={<Restaurants />} />
               <Route path="restaurants/:id" element={<RestaurantDetails />} />
               <Route path="restaurants/:id/menu" element={<MenuManagement />} />

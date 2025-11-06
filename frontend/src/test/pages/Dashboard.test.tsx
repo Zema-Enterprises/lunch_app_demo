@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import Dashboard from '@/pages/Dashboard';
-import { createMockEvent, createMockRestaurant } from '@/test/utils/factories';
+import { createMockEvent, createMockRestaurant, createMockUser } from '@/test/utils/factories';
 
 const mockNavigate = vi.fn();
 
@@ -15,6 +15,14 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+vi.mock('@/store/authStore', () => ({
+  useAuthStore: vi.fn(() => ({
+    user: createMockUser({ role: 'ADMIN' }),
+    token: 'mock-token',
+    isAuthenticated: true,
+  })),
+}));
 
 vi.mock('@/lib/api/hooks', () => ({
   useEvents: vi.fn(() => ({ data: [], isLoading: false })),
@@ -60,7 +68,14 @@ describe('Dashboard Page - Create Event Navigation', () => {
     } as any);
   });
 
-  it('navigates to events page with create modal request when Create Event button is clicked', async () => {
+  it('navigates to events page with create modal request when Create Event button is clicked (admin only)', async () => {
+    const authStore = await import('@/store/authStore');
+    vi.mocked(authStore.useAuthStore).mockReturnValue({
+      user: createMockUser({ role: 'ADMIN' }),
+      token: 'mock-token',
+      isAuthenticated: true,
+    } as any);
+
     renderDashboard();
     const user = userEvent.setup();
 
@@ -68,5 +83,19 @@ describe('Dashboard Page - Create Event Navigation', () => {
     await user.click(button);
 
     expect(mockNavigate).toHaveBeenCalledWith('/events', { state: { openCreateEvent: true } });
+  });
+
+  it('should NOT show Create Event button for regular users', async () => {
+    const authStore = await import('@/store/authStore');
+    vi.mocked(authStore.useAuthStore).mockReturnValue({
+      user: createMockUser({ role: 'USER' }),
+      token: 'mock-token',
+      isAuthenticated: true,
+    } as any);
+
+    renderDashboard();
+
+    const button = screen.queryByRole('button', { name: /create event/i });
+    expect(button).not.toBeInTheDocument();
   });
 });

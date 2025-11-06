@@ -18,6 +18,7 @@ import { cleanupTestData } from '../../test/helpers/db.helper';
 import { authenticatedRequest, assertSuccess, assertUnauthorized, assertBadRequest, assertNotFound, assertForbidden } from '../../test/helpers/request.helper';
 import { createRestaurant } from '../../test/factories/restaurant.factory';
 import { createEvent } from '../../test/factories/event.factory';
+import { createMenuItem } from '../../test/factories/menuItem.factory';
 
 describe('Event Management Flow Integration Tests', () => {
   describe('Event Creation', () => {
@@ -58,7 +59,7 @@ describe('Event Management Flow Integration Tests', () => {
         });
       });
 
-      it('should create an event as regular user', async () => {
+      it('should reject event creation by regular user (admin only)', async () => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -71,8 +72,8 @@ describe('Event Management Flow Integration Tests', () => {
             restaurantId: restaurant.id,
           });
 
-        assertSuccess(response);
-        expect(response.body.data.createdById).toBe(testData.employees[0].id);
+        assertForbidden(response);
+        expect(response.body.error).toMatch(/admin/i);
       });
 
       it('should auto-set status to OPEN for future events', async () => {
@@ -806,6 +807,111 @@ describe('Event Management Flow Integration Tests', () => {
       });
     });
 
+    describe('Leave Event', () => {
+      beforeEach(async () => {
+        // Have employee join the event first
+        await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/join`);
+      });
+
+      it('should allow participant to leave event', async () => {
+        const response = await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        assertSuccess(response);
+
+        // Verify they're no longer in participants
+        const eventResponse = await authenticatedRequest(app, testData.employees[0].token)
+          .get(`/api/events/${openEvent.id}`);
+        
+        assertSuccess(eventResponse);
+        const participants = eventResponse.body.data.participants;
+        expect(participants.some((p: any) => p.userId === testData.employees[0].id)).toBe(false);
+      });
+
+      it('should reject creator leaving their own event', async () => {
+        // Admin is the creator, try to leave
+        const response = await authenticatedRequest(app, testData.admin.token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        assertForbidden(response);
+        expect(response.body.message).toContain('creator');
+      });
+
+      it('should reject non-participant leaving', async () => {
+        // Employee 1 never joined, try to leave
+        const response = await authenticatedRequest(app, testData.employees[1].token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        // Should be idempotent - returns success even if not a participant
+        assertSuccess(response);
+        expect(response.body.data.message).toContain('not a participant');
+      });
+
+      it('should reject leaving closed event', async () => {
+        // Close the event
+        await authenticatedRequest(app, testData.admin.token)
+          .post(`/api/events/${openEvent.id}/close`);
+
+        const response = await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        assertForbidden(response);
+        expect(response.body.message).toContain('closed');
+      });
+
+      it('should reject leaving event from different company', async () => {
+        const company2Data = await setupCompanyWithUsers({ employeeCount: 1 });
+
+        try {
+          if (!company2Data.employees || company2Data.employees.length === 0) {
+            throw new Error('Failed to create test employee');
+          }
+          
+          const response = await authenticatedRequest(app, company2Data.employees[0].token)
+            .post(`/api/events/${openEvent.id}/leave`);
+
+          assertForbidden(response);
+        } finally {
+          await cleanupTestData(company2Data.company.id);
+        }
+      });
+
+      it('should notify event creator when someone leaves', async () => {
+        // Employee leaves the event
+        const leaveResponse = await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        assertSuccess(leaveResponse);
+
+        // Add small delay to ensure notifications are created
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Check creator's notifications
+        const notificationsResponse = await authenticatedRequest(app, testData.admin.token)
+          .get('/api/notifications');
+
+        assertSuccess(notificationsResponse);
+
+        // Creator should have received USER_LEFT_EVENT notification
+        const leaveNotifications = notificationsResponse.body.data.filter(
+          (n: any) => n.type === 'USER_LEFT_EVENT' && n.eventId === openEvent.id
+        );
+
+        expect(leaveNotifications.length).toBeGreaterThan(0);
+      });
+
+      it('should be idempotent (leaving twice is okay)', async () => {
+        await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        const response = await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/leave`);
+
+        assertSuccess(response);
+      });
+    });
+
     describe('Event Participants', () => {
       it('should show event participants', async () => {
         // Have a few users join
@@ -823,6 +929,127 @@ describe('Event Management Flow Integration Tests', () => {
         expect(response.body.data).toHaveProperty('participants');
         expect(Array.isArray(response.body.data.participants) || 
                typeof response.body.data.participants === 'number').toBe(true);
+      });
+    });
+
+    describe('Event Orders', () => {
+      let menuItem1: any;
+      let menuItem2: any;
+
+      beforeEach(async () => {
+        // Create menu items for the restaurant
+        menuItem1 = await createMenuItem({
+          restaurantId: restaurant.id,
+          name: 'Pizza Margherita',
+          price: 12.50,
+        });
+
+        menuItem2 = await createMenuItem({
+          restaurantId: restaurant.id,
+          name: 'Caesar Salad',
+          price: 8.00,
+        });
+
+        // Have employees join and place orders
+        await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/events/${openEvent.id}/join`);
+        
+        await authenticatedRequest(app, testData.employees[1].token)
+          .post(`/api/events/${openEvent.id}/join`);
+      });
+
+      it('should return all orders for an event', async () => {
+        // Employee 0 places an order
+        await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/orders/${openEvent.id}/orders`)
+          .send({
+            orderItems: [
+              { menuItemId: menuItem1.id, quantity: 2, price: 12.50 },
+            ],
+            totalAmount: 25.00,
+          });
+
+        // Employee 1 places an order
+        await authenticatedRequest(app, testData.employees[1].token)
+          .post(`/api/orders/${openEvent.id}/orders`)
+          .send({
+            orderItems: [
+              { menuItemId: menuItem2.id, quantity: 1, price: 8.00 },
+            ],
+            totalAmount: 8.00,
+          });
+
+        const response = await authenticatedRequest(app, testData.admin.token)
+          .get(`/api/events/${openEvent.id}/orders`);
+
+        assertSuccess(response);
+        expect(response.body.data).toHaveLength(2);
+        
+        // Verify orders include user info
+        expect(response.body.data[0]).toHaveProperty('user');
+        expect(response.body.data[0].user).toHaveProperty('name');
+        expect(response.body.data[0].user).toHaveProperty('email');
+        
+        // Verify orders include order items
+        expect(response.body.data[0]).toHaveProperty('orderItems');
+        expect(Array.isArray(response.body.data[0].orderItems)).toBe(true);
+        
+        // Verify total amounts
+        const totals = response.body.data.map((o: any) => o.totalAmount);
+        expect(totals).toContain(25.00);
+        expect(totals).toContain(8.00);
+      });
+
+      it('should return empty array when no orders exist', async () => {
+        const response = await authenticatedRequest(app, testData.admin.token)
+          .get(`/api/events/${openEvent.id}/orders`);
+
+        assertSuccess(response);
+        expect(response.body.data).toEqual([]);
+      });
+
+      it('should enforce company isolation for orders', async () => {
+        const company2Data = await setupCompanyWithUsers({ employeeCount: 1 });
+
+        try {
+          if (!company2Data.employees || company2Data.employees.length === 0) {
+            throw new Error('Failed to create test employee');
+          }
+          
+          const response = await authenticatedRequest(app, company2Data.employees[0].token)
+            .get(`/api/events/${openEvent.id}/orders`);
+
+          assertNotFound(response);
+        } finally {
+          await cleanupTestData(company2Data.company.id);
+        }
+      });
+
+      it('should allow regular users to view orders', async () => {
+        // Regular employee should be able to view orders
+        const response = await authenticatedRequest(app, testData.employees[0].token)
+          .get(`/api/events/${openEvent.id}/orders`);
+
+        assertSuccess(response);
+      });
+
+      it('should include payment status in orders', async () => {
+        // Place an order
+        await authenticatedRequest(app, testData.employees[0].token)
+          .post(`/api/orders/${openEvent.id}/orders`)
+          .send({
+            orderItems: [
+              { menuItemId: menuItem1.id, quantity: 1, price: 12.50 },
+            ],
+            totalAmount: 12.50,
+          });
+
+        const response = await authenticatedRequest(app, testData.admin.token)
+          .get(`/api/events/${openEvent.id}/orders`);
+
+        assertSuccess(response);
+        expect(response.body.data[0]).toHaveProperty('paymentConfirmed');
+        expect(typeof response.body.data[0].paymentConfirmed).toBe('boolean');
       });
     });
   });

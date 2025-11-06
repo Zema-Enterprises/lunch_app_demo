@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
-import { registerSchema, RegisterFormData } from '../lib/validation/schemas';
+import { registerSchema, RegisterFormData, PASSWORD_REQUIREMENTS_HINT } from '../lib/validation/schemas';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ const Register: React.FC = () => {
               <label htmlFor="email" className="text-sm font-medium">Email</label>
               <Input
                 id="email"
-                type="text"
+                type="email"
                 placeholder="john@company.com"
                 autoComplete="email"
                 {...register('email')}
@@ -90,6 +90,9 @@ const Register: React.FC = () => {
               />
               {errors.password && (
                 <p id="password-error" className="text-sm text-red-600" role="alert">{errors.password.message}</p>
+              )}
+              {!errors.password && (
+                <p className="text-xs text-slate-500">{PASSWORD_REQUIREMENTS_HINT}</p>
               )}
             </div>
             <div className="space-y-2">

@@ -3,6 +3,11 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useChangePassword } from '../../lib/api/hooks';
 import { X } from 'lucide-react';
+import {
+  PASSWORD_COMPLEXITY_REGEX,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  PASSWORD_REQUIREMENTS_HINT,
+} from '../../lib/validation/schemas';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
@@ -26,8 +31,8 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
 
     if (!newPassword) {
       newErrors.newPassword = 'New password is required';
-    } else if (newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters';
+    } else if (!PASSWORD_COMPLEXITY_REGEX.test(newPassword)) {
+      newErrors.newPassword = PASSWORD_REQUIREMENTS_MESSAGE;
     }
 
     if (!confirmPassword) {
@@ -124,7 +129,7 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
             {errors.newPassword ? (
               <p className="text-sm text-red-500 mt-1">{errors.newPassword}</p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">Must be at least 8 characters</p>
+              <p className="text-sm text-gray-500 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
             )}
           </div>
 

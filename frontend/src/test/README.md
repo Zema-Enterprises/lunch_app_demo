@@ -117,7 +117,7 @@ const orderCreatedResponse = mockResponses.orders.created(order);
 const unauthorizedError = apiErrors.unauthorized;
 const validationError = apiErrors.validationError({
   email: ['Email is required'],
-  password: ['Password must be at least 8 characters'],
+  password: ['Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'],
 });
 
 // Create custom paginated response

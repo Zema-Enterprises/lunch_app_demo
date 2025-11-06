@@ -14,6 +14,7 @@ import {
   createMockEvent,
 } from '../utils/factories';
 import type { UserNotificationSettings } from '@/types';
+import { useAuthStore } from '@/store/authStore';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -51,7 +52,13 @@ const loginUser = async (user: ReturnType<typeof userEvent['setup']>) => {
 
 describe('Notification Workflow Integration', () => {
   beforeEach(() => {
-    localStorage.clear();
+    useAuthStore.setState({
+      user: null,
+      company: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
     window.history.pushState({}, '', '/');
 
     server.use(

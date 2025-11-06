@@ -57,7 +57,7 @@ async function main() {
         create: {
           emailEnabled: true,
           inAppEnabled: true,
-          notifyOnEventCreated: false, // Default user doesn't want ALL event notifications
+          notifyOnEventCreated: true, // Users should receive event creation notifications
           notifyOnOrderPlaced: true,
           notifyOnDeadlineApproaching: true,
           notifyOnEventClosed: true,
@@ -228,6 +228,9 @@ async function main() {
 
   console.log('Added admin user as participant');
 
+  // Note: Commented out delivery receipts seed since notifications don't exist yet
+  // Uncomment after creating the referenced notifications
+  /*
   // Seed sample delivery receipts for telemetry dashboards
   await prisma.notificationDeliveryReceipt.createMany({
     data: [
@@ -255,6 +258,7 @@ async function main() {
   });
 
   console.log('Seeded sample delivery receipts');
+  */
 
   console.log('\n=== Seed completed successfully! ===');
   console.log('\nLogin credentials:');

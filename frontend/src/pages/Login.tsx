@@ -52,7 +52,7 @@ const Login: React.FC = () => {
               <label htmlFor="email" className="text-sm font-medium">Email</label>
               <Input
                 id="email"
-                type="text"
+                type="email"
                 placeholder="you@company.com"
                 autoComplete="email"
                 aria-required="true"

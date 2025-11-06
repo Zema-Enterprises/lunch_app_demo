@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PASSWORD_COMPLEXITY_REGEX, PASSWORD_REQUIREMENTS_MESSAGE } from '../../utils/password';
 
 export const updateProfileSchema = z.object({
   body: z.object({
@@ -10,7 +11,10 @@ export const updateProfileSchema = z.object({
 export const changePasswordSchema = z.object({
   body: z.object({
     currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: z
+      .string()
+      .max(100, 'Password must be 100 characters or fewer')
+      .regex(PASSWORD_COMPLEXITY_REGEX, PASSWORD_REQUIREMENTS_MESSAGE),
   }),
 });
 

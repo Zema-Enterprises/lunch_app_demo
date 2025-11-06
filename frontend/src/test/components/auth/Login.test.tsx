@@ -6,6 +6,7 @@ import { render } from '../../utils/test-utils';
 import Login from '@/pages/Login';
 import { server } from '../../mocks/server';
 import { http, HttpResponse } from 'msw';
+import { useAuthStore } from '@/store/authStore';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -22,7 +23,13 @@ vi.mock('react-router-dom', async () => {
 describe('Login Component', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
-    localStorage.clear();
+    useAuthStore.setState({
+      user: null,
+      company: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
   });
 
   describe('Rendering & Structure', () => {
@@ -51,7 +58,7 @@ describe('Login Component', () => {
       expect(form).toBeInTheDocument();
 
       const emailInput = screen.getByLabelText(/email/i);
-      expect(emailInput).toHaveAttribute('type', 'text'); // Changed to 'text' to allow Zod validation
+      expect(emailInput).toHaveAttribute('type', 'email');
       expect(emailInput).toHaveAttribute('autocomplete', 'email');
       expect(emailInput).toHaveAttribute('aria-required', 'true');
 
@@ -91,13 +98,28 @@ describe('Login Component', () => {
       await user.click(submitButton);
 
       // Should show validation error for email
-      await waitFor(() => {
-        expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
-      });
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBeNull();
     });
 
     it('should validate invalid email format', async () => {
       const user = userEvent.setup();
+
+      const loginHandler = vi.fn(() =>
+        HttpResponse.json({
+          data: {
+            token: 'mock-jwt-token',
+            user: {
+              id: 'user-1',
+              email: 'test@example.com',
+              name: 'Test User',
+              role: 'USER',
+              companyId: 'company-1',
+            },
+          },
+        })
+      );
+      server.use(http.post(`${API_URL}/auth/login`, loginHandler));
       render(<Login />);
 
       const emailInput = screen.getByLabelText(/email/i);
@@ -109,9 +131,9 @@ describe('Login Component', () => {
       await user.type(passwordInput, 'password123'); // Add password to pass password validation
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
-      });
+      expect(loginHandler).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBeNull();
     });
 
     it('should validate empty password field', async () => {
@@ -124,26 +146,8 @@ describe('Login Component', () => {
       await user.type(emailInput, 'test@example.com');
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/password must be at least 6 characters/i)).toBeInTheDocument();
-      });
-    });
-
-    it('should validate password minimum length', async () => {
-      const user = userEvent.setup();
-      render(<Login />);
-
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-
-      await user.type(emailInput, 'test@example.com');
-      await user.type(passwordInput, '12345'); // Only 5 characters
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/password must be at least 6 characters/i)).toBeInTheDocument();
-      });
+      const passwordError = await screen.findByText(/password is required/i);
+      expect(passwordError).toBeInTheDocument();
     });
 
     it('should mark invalid fields with aria-invalid', async () => {
@@ -223,8 +227,8 @@ describe('Login Component', () => {
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
       });
 
-      // Should store token in localStorage
-      expect(localStorage.getItem('token')).toBe('mock-jwt-token');
+      // Should update auth store with token
+      expect(useAuthStore.getState().token).toBe('mock-jwt-token');
     });
 
     it('should show loading state during login', async () => {
@@ -322,6 +326,9 @@ describe('Login Component', () => {
             { message: 'Invalid email or password' },
             { status: 401 }
           );
+        }),
+        http.post(`${API_URL}/auth/refresh`, () => {
+          return HttpResponse.json({ message: 'Unauthorized' }, { status: 401 });
         })
       );
 
@@ -346,7 +353,7 @@ describe('Login Component', () => {
       expect(mockNavigate).not.toHaveBeenCalled();
 
       // Should not store token
-      expect(localStorage.getItem('token')).toBeNull();
+      expect(useAuthStore.getState().token).toBeNull();
     });
 
     it('should display generic error for network failures', async () => {
@@ -355,6 +362,9 @@ describe('Login Component', () => {
       server.use(
         http.post(`${API_URL}/auth/login`, () => {
           return HttpResponse.error();
+        }),
+        http.post(`${API_URL}/auth/refresh`, () => {
+          return HttpResponse.json({ message: 'Unauthorized' }, { status: 401 });
         })
       );
 

@@ -9,9 +9,11 @@ import { format } from 'date-fns';
 import { SkeletonStats, SkeletonList } from '../components/loading/SkeletonLoaders';
 import { EmptyState } from '../components/ui/empty-state';
 import NotificationAnalyticsPanel from '@/components/notifications/NotificationAnalyticsPanel';
+import { useAuthStore } from '../store/authStore';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { data: events, isLoading: eventsLoading } = useEvents('OPEN');
   const { data: restaurants, isLoading: restaurantsLoading } = useRestaurants();
   const { data: userStats, isLoading: statsLoading } = useUserStats();
@@ -33,13 +35,15 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Button
-          onClick={() => navigate('/events', { state: { openCreateEvent: true } })}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Create Event
-        </Button>
+        {user?.role === 'ADMIN' && (
+          <Button
+            onClick={() => navigate('/events', { state: { openCreateEvent: true } })}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Event
+          </Button>
+        )}
       </div>
 
       {/* Quick Actions */}

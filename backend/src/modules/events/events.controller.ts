@@ -496,6 +496,124 @@ export const joinEvent = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Leave an event - remove participant
+ */
+export const leaveEvent = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Verify event exists and belongs to user's company
+    const event = await prisma.event.findFirst({
+      where: {
+        id,
+        companyId: req.user!.companyId,
+      },
+    });
+
+    if (!event) {
+      return res.status(403).json({ message: 'Event not found or access denied' });
+    }
+
+    // Check if event is open
+    if (event.status !== 'OPEN') {
+      return res.status(403).json({ message: 'Cannot leave closed event' });
+    }
+
+    // Check if user is the creator - creators cannot leave their own events
+    if (event.createdById === req.user!.userId) {
+      return res.status(403).json({ message: 'Event creator cannot leave their own event' });
+    }
+
+    // Check if user is a participant
+    const participant = await prisma.eventParticipant.findUnique({
+      where: {
+        userId_eventId: {
+          userId: req.user!.userId,
+          eventId: id,
+        },
+      },
+    });
+
+    if (!participant) {
+      // Idempotent - return success if not a participant
+      return res.status(200).json({ 
+        data: { message: 'User is not a participant in this event' } 
+      });
+    }
+
+    // Delete the participant record
+    await prisma.eventParticipant.delete({
+      where: {
+        userId_eventId: {
+          userId: req.user!.userId,
+          eventId: id,
+        },
+      },
+    });
+
+    // Notify event creator that someone left
+    await createNotificationEvent({
+      type: 'USER_LEFT_EVENT',
+      userId: event.createdById,
+      eventId: id,
+    });
+
+    return res.status(200).json({ 
+      data: { message: 'Successfully left event' } 
+    });
+  } catch (error) {
+    console.error('Leave event error:', error);
+    return res.status(500).json({ message: 'Failed to leave event' });
+  }
+};
+
+/**
+ * Get all orders for an event
+ */
+export const getEventOrders = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Verify event exists and belongs to company
+    const event = await prisma.event.findFirst({
+      where: {
+        id,
+        companyId: req.user!.companyId,
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: {
+        eventId: id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        orderItems: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    return res.json({ data: orders });
+  } catch (error) {
+    console.error('Get event orders error:', error);
+    return res.status(500).json({ message: 'Failed to fetch orders' });
+  }
+};
+
+/**
  * Check if event meets auto-completion criteria and complete if so
  * Criteria: Event is CLOSED, all orders paid, and delivery marked
  */

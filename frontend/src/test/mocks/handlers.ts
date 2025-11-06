@@ -128,6 +128,18 @@ export const mockStats = {
 // MSW handlers
 export const handlers = [
   // Auth
+  http.post(`${API_URL}/auth/refresh`, () => {
+    return HttpResponse.json({ data: { token: 'mock-refreshed-token' } });
+  }),
+
+  http.post(`${API_URL}/auth/login`, () => {
+    return HttpResponse.json({ data: { token: 'mock-login-token', user: mockUser } });
+  }),
+
+  http.post(`${API_URL}/auth/register`, () => {
+    return HttpResponse.json({ data: { token: 'mock-register-token', user: mockUser } });
+  }),
+
   http.get(`${API_URL}/auth/me`, () => {
     return HttpResponse.json({ data: mockUser });
   }),

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog';
 import { renderWithProviders } from '../../utils/test-utils';
+import { PASSWORD_REQUIREMENTS_MESSAGE, PASSWORD_REQUIREMENTS_HINT } from '@/lib/validation/schemas';
 
 // Mock hooks
 vi.mock('@/lib/api/hooks', () => ({
@@ -25,6 +26,8 @@ describe('ChangePasswordDialog', () => {
     vi.clearAllMocks();
     (useChangePassword as any).mockReturnValue(mockChangePasswordMutation);
   });
+  const STRONG_PASSWORD = 'StrongPass123!';
+  const CURRENT_PASSWORD = 'CurrentPass123!';
 
   describe('Rendering & Structure', () => {
     it('should not render when isOpen is false', () => {
@@ -68,9 +71,9 @@ describe('ChangePasswordDialog', () => {
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
       const currentPasswordInput = screen.getByLabelText('Current Password');
-      await user.type(currentPasswordInput, 'oldPassword123');
+      await user.type(currentPasswordInput, CURRENT_PASSWORD);
 
-      expect(currentPasswordInput).toHaveValue('oldPassword123');
+      expect(currentPasswordInput).toHaveValue(CURRENT_PASSWORD);
     });
 
     it('should allow entering new password', async () => {
@@ -78,9 +81,9 @@ describe('ChangePasswordDialog', () => {
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
       const newPasswordInput = screen.getByLabelText('New Password');
-      await user.type(newPasswordInput, 'newPassword123');
+      await user.type(newPasswordInput, STRONG_PASSWORD);
 
-      expect(newPasswordInput).toHaveValue('newPassword123');
+      expect(newPasswordInput).toHaveValue(STRONG_PASSWORD);
     });
 
     it('should allow entering confirm password', async () => {
@@ -88,9 +91,9 @@ describe('ChangePasswordDialog', () => {
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
       const confirmPasswordInput = screen.getByLabelText('Confirm New Password');
-      await user.type(confirmPasswordInput, 'newPassword123');
+      await user.type(confirmPasswordInput, STRONG_PASSWORD);
 
-      expect(confirmPasswordInput).toHaveValue('newPassword123');
+      expect(confirmPasswordInput).toHaveValue(STRONG_PASSWORD);
     });
 
     it('should have password type inputs', () => {
@@ -115,8 +118,8 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -128,8 +131,8 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -141,22 +144,22 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
       await user.type(screen.getByLabelText('New Password'), 'short');
       await user.type(screen.getByLabelText('Confirm New Password'), 'short');
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
 
-      expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument();
+      expect(await screen.findByText(PASSWORD_REQUIREMENTS_MESSAGE)).toBeInTheDocument();
     });
 
     it('should show error when confirm password is empty', async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -168,8 +171,8 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
       await user.type(screen.getByLabelText('Confirm New Password'), 'differentPassword');
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
@@ -194,7 +197,7 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -208,8 +211,8 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -222,22 +225,22 @@ describe('ChangePasswordDialog', () => {
     it('should show password requirement hint under new password field', () => {
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('Must be at least 8 characters')).toBeInTheDocument();
+      expect(screen.getByText(PASSWORD_REQUIREMENTS_HINT)).toBeInTheDocument();
     });
 
     it('should replace hint with error when new password validation fails', async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
       await user.type(screen.getByLabelText('New Password'), 'short');
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('Must be at least 8 characters')).not.toBeInTheDocument();
-        expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
+        expect(screen.queryByText(PASSWORD_REQUIREMENTS_HINT)).not.toBeInTheDocument();
+        expect(screen.getByText(PASSWORD_REQUIREMENTS_MESSAGE)).toBeInTheDocument();
       });
     });
 
@@ -258,17 +261,17 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
 
       await waitFor(() => {
         expect(mockChangePasswordMutation.mutateAsync).toHaveBeenCalledWith({
-          currentPassword: 'oldPassword123',
-          newPassword: 'newPassword123',
+          currentPassword: CURRENT_PASSWORD,
+          newPassword: STRONG_PASSWORD,
         });
       });
     });
@@ -278,9 +281,9 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -297,9 +300,9 @@ describe('ChangePasswordDialog', () => {
         <ChangePasswordDialog isOpen={true} onClose={mockOnClose} />
       );
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -347,9 +350,9 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -365,9 +368,9 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
-      await user.type(screen.getByLabelText('Confirm New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
+      await user.type(screen.getByLabelText('Confirm New Password'), STRONG_PASSWORD);
 
       const submitButton = screen.getByRole('button', { name: /change password/i });
       await user.click(submitButton);
@@ -417,8 +420,8 @@ describe('ChangePasswordDialog', () => {
       const user = userEvent.setup();
       renderWithProviders(<ChangePasswordDialog isOpen={true} onClose={mockOnClose} />);
 
-      await user.type(screen.getByLabelText('Current Password'), 'oldPassword123');
-      await user.type(screen.getByLabelText('New Password'), 'newPassword123');
+      await user.type(screen.getByLabelText('Current Password'), CURRENT_PASSWORD);
+      await user.type(screen.getByLabelText('New Password'), STRONG_PASSWORD);
 
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       await user.click(cancelButton);

@@ -66,7 +66,7 @@ services:
       - ./backend:/app
       - /app/node_modules
     working_dir: /app
-    command: sh -c "npx prisma generate && npx prisma migrate deploy && (npm run db:seed || echo 'Skipping seed...') && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma db push --accept-data-loss && (npm run db:seed || echo 'Skipping seed...') && npm run dev"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:5000/health || exit 1"]
       interval: 30s

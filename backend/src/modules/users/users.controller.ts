@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../../config/database';
 import { hashPassword, comparePassword } from '../../utils/bcrypt';
 import { AuthRequest } from '../../middleware/auth';
+import { isPasswordStrong, PASSWORD_REQUIREMENTS_MESSAGE } from '../../utils/password';
 
 // Get user by ID
 export const getUser = async (req: AuthRequest, res: Response) => {
@@ -155,6 +156,10 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
+    if (!password || !isPasswordStrong(password)) {
+      return res.status(400).json({ message: PASSWORD_REQUIREMENTS_MESSAGE });
+    }
+
     const hashedPassword = await hashPassword(password);
 
     const newUser = await prisma.user.create({
@@ -245,6 +250,9 @@ export const updateUserPassword = async (req: AuthRequest, res: Response) => {
     }
 
     // Hash and update password
+    if (!newPassword || !isPasswordStrong(newPassword)) {
+      return res.status(400).json({ message: PASSWORD_REQUIREMENTS_MESSAGE });
+    }
     const hashedPassword = await hashPassword(newPassword);
     await prisma.user.update({
       where: { id },
@@ -317,6 +325,9 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     }
 
     // Hash new password
+    if (!newPassword || !isPasswordStrong(newPassword)) {
+      return res.status(400).json({ message: PASSWORD_REQUIREMENTS_MESSAGE });
+    }
     const hashedPassword = await hashPassword(newPassword);
 
     // Update password

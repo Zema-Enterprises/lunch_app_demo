@@ -49,6 +49,7 @@ model User {
   notificationSettings UserNotificationSettings?
   deliveryReceipts     NotificationDeliveryReceipt[]
   pushSubscriptions    PushSubscription[]
+  refreshTokens        RefreshToken[]
 }
 
 // Restaurants
@@ -167,6 +168,7 @@ model OrderItem {
 enum NotificationType {
   EVENT_CREATED
   USER_JOINED_EVENT
+  USER_LEFT_EVENT
   ORDER_PLACED
   ORDER_UPDATED
   EVENT_CLOSING_SOON
@@ -206,6 +208,19 @@ model NotificationEvent {
 
   @@index([userId, read])
   @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model NotificationDeliveryReceipt {

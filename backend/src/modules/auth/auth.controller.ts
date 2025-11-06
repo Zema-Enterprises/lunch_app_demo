@@ -3,19 +3,25 @@ import prisma from '../../config/database';
 import { hashPassword, comparePassword } from '../../utils/bcrypt';
 import { generateToken } from '../../utils/jwt';
 import { AuthRequest } from '../../middleware/auth';
+import { isPasswordStrong, PASSWORD_REQUIREMENTS_MESSAGE } from '../../utils/password';
+import {
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+  extractRefreshTokenFromRequest,
+  RefreshTokenError,
+} from './refreshToken.service';
 
 export const register = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password, name, companyName, companyDomain, companySlug, companyId, role } =
+    const { email, password, name, companyName, companyDomain, companySlug, companyId } =
       req.body;
 
-    const strongPasswordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
-
-    if (!password || !strongPasswordRegex.test(password)) {
+    if (!password || !isPasswordStrong(password)) {
       return res.status(400).json({
-        message:
-          'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.',
+        message: PASSWORD_REQUIREMENTS_MESSAGE,
       });
     }
 
@@ -39,6 +45,8 @@ export const register = async (req: AuthRequest, res: Response) => {
     let result;
 
     // Check if registering to existing company or creating new one
+    const assignedRole = companyId ? 'USER' : 'ADMIN';
+
     if (companyId) {
       // Register to existing company
       const company = await prisma.company.findUnique({
@@ -54,7 +62,7 @@ export const register = async (req: AuthRequest, res: Response) => {
           email: email.toLowerCase(),
           password: hashedPassword,
           name,
-          role: role || 'USER',
+          role: assignedRole,
           companyId,
         },
       });
@@ -89,7 +97,7 @@ export const register = async (req: AuthRequest, res: Response) => {
             email: email.toLowerCase(),
             password: hashedPassword,
             name,
-            role: 'ADMIN',
+            role: assignedRole,
             companyId: company.id,
           },
         });
@@ -98,7 +106,12 @@ export const register = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Generate JWT token
+    const refresh = await issueRefreshToken(result.user.id, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    });
+    setRefreshTokenCookie(res, refresh.token, refresh.expiresAt);
+
     const token = generateToken({
       userId: result.user.id,
       email: result.user.email,
@@ -160,6 +173,12 @@ export const login = async (req: AuthRequest, res: Response) => {
       role: user.role,
     });
 
+    const refresh = await issueRefreshToken(user.id, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    });
+    setRefreshTokenCookie(res, refresh.token, refresh.expiresAt);
+
     return res.json({
       data: {
         token,
@@ -211,7 +230,66 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 };
 
 export const logout = async (req: AuthRequest, res: Response) => {
-  // For JWT-based auth, logout is typically handled client-side
-  // But we provide an endpoint for consistency
-  return res.status(200).json({ message: 'Logged out successfully' });
+  try {
+    const refreshToken = extractRefreshTokenFromRequest(req);
+    await revokeRefreshToken(refreshToken);
+    clearRefreshTokenCookie(res);
+    return res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    clearRefreshTokenCookie(res);
+    return res.status(200).json({ message: 'Logged out successfully' });
+  }
+};
+
+export const refreshAccessToken = async (req: AuthRequest, res: Response) => {
+  try {
+    const refreshToken = extractRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'Refresh token missing' });
+    }
+
+    const rotation = await rotateRefreshToken(refreshToken, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: rotation.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        companyId: true,
+      },
+    });
+
+    if (!user) {
+      await revokeRefreshToken(rotation.token);
+      clearRefreshTokenCookie(res);
+      return res.status(401).json({ error: 'Account no longer exists' });
+    }
+
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      companyId: user.companyId,
+      role: user.role,
+    });
+
+    setRefreshTokenCookie(res, rotation.token, rotation.expiresAt);
+
+    return res.status(200).json({
+      data: {
+        token,
+      },
+    });
+  } catch (error) {
+    if (error instanceof RefreshTokenError) {
+      clearRefreshTokenCookie(res);
+      return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+    console.error('Refresh token error:', error);
+    return res.status(500).json({ message: 'Failed to refresh session' });
+  }
 };

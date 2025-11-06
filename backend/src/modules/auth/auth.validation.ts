@@ -1,9 +1,13 @@
 import { z } from 'zod';
+import { PASSWORD_COMPLEXITY_REGEX, PASSWORD_REQUIREMENTS_MESSAGE } from '../../utils/password';
 
 export const registerSchema = z.object({
   body: z.object({
     email: z.string().email().max(255),
-    password: z.string().min(6).max(100),
+    password: z
+      .string()
+      .max(100, 'Password must be 100 characters or fewer')
+      .regex(PASSWORD_COMPLEXITY_REGEX, PASSWORD_REQUIREMENTS_MESSAGE),
     name: z.string().min(1).max(100),
     companyId: z.string().optional(),
     role: z.enum(['ADMIN', 'USER']).optional(),

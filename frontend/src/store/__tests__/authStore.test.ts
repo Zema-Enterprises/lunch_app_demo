@@ -1,23 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../authStore';
 
-const mockGet = vi.hoisted(() => vi.fn());
+const apiClientMock = vi.hoisted(() => {
+  const register = vi.fn<(listener: (token: string | null) => void) => void>();
+  const storage: { listener?: (token: string | null) => void } = {};
+
+  register.mockImplementation((listener) => {
+    storage.listener = listener;
+  });
+
+  return {
+    get: vi.fn(),
+    post: vi.fn(),
+    register,
+    setToken: vi.fn(),
+    storage,
+  };
+});
 
 vi.mock('../../lib/api/client', () => ({
   default: {
-    get: mockGet,
-    post: vi.fn(),
+    get: apiClientMock.get,
+    post: apiClientMock.post,
     interceptors: {
       request: { use: vi.fn(), eject: vi.fn() },
       response: { use: vi.fn(), eject: vi.fn() },
     },
   },
+  registerAccessTokenListener: apiClientMock.register,
+  setAccessToken: apiClientMock.setToken,
 }));
 
-describe('authStore.loadUser', () => {
+describe('authStore', () => {
   beforeEach(() => {
-    mockGet.mockReset();
-    localStorage.clear();
+    apiClientMock.get.mockReset();
+    apiClientMock.post.mockReset();
+    apiClientMock.setToken.mockReset();
     useAuthStore.setState({
       user: null,
       company: null,
@@ -27,7 +45,7 @@ describe('authStore.loadUser', () => {
     });
   });
 
-  it('hydrates user data when auth/me returns a user object directly under data', async () => {
+  it('hydrates user after refreshing access token', async () => {
     const mockUser = {
       id: 'user-123',
       email: 'admin@demo.com',
@@ -36,20 +54,44 @@ describe('authStore.loadUser', () => {
       companyId: 'company-1',
     };
 
-    mockGet.mockResolvedValue({ data: { data: mockUser } });
+    apiClientMock.post.mockResolvedValueOnce({ data: { data: { token: 'new-access-token' } } });
+    apiClientMock.get.mockResolvedValueOnce({ data: { data: mockUser } });
 
-    localStorage.setItem('token', 'test-token');
-    useAuthStore.setState({
-      ...useAuthStore.getState(),
-      token: 'test-token',
-      isAuthenticated: true,
-    });
+    await useAuthStore.getState().loadUser();
+
+    expect(apiClientMock.post).toHaveBeenCalledWith('/auth/refresh');
+    expect(apiClientMock.get).toHaveBeenCalledWith('/auth/me');
+    expect(apiClientMock.setToken).toHaveBeenCalledWith('new-access-token');
+
+    const state = useAuthStore.getState();
+    expect(state.token).toBe('new-access-token');
+    expect(state.user).toEqual(mockUser);
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.isLoading).toBe(false);
+  });
+
+  it('clears auth state when refresh fails', async () => {
+    apiClientMock.post.mockRejectedValueOnce(new Error('refresh failed'));
 
     await useAuthStore.getState().loadUser();
 
     const state = useAuthStore.getState();
-    expect(mockGet).toHaveBeenCalledWith('/auth/me');
-    expect(state.user).toEqual(mockUser);
-    expect(state.isAuthenticated).toBe(true);
+    expect(state.token).toBeNull();
+    expect(state.user).toBeNull();
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.isLoading).toBe(false);
+  });
+
+  it('updates token when interceptor listener fires', () => {
+    const listener = apiClientMock.storage.listener;
+    expect(listener).toBeDefined();
+
+    listener?.('interceptor-token');
+    expect(useAuthStore.getState().token).toBe('interceptor-token');
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+
+    listener?.(null);
+    expect(useAuthStore.getState().token).toBeNull();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 });

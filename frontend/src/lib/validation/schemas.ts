@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+export const PASSWORD_COMPLEXITY_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
+
+export const PASSWORD_REQUIREMENTS_MESSAGE =
+  'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+
+export const PASSWORD_REQUIREMENTS_HINT =
+  'Use at least 8 characters with uppercase, lowercase, number, and a special character.';
+
 // Restaurant validation schemas
 export const restaurantSchema = z.object({
   name: z.string().min(1, 'Restaurant name is required'),
@@ -28,7 +37,7 @@ export type EventFormData = z.infer<typeof eventSchema>;
 // Auth validation schemas
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
@@ -39,7 +48,10 @@ export const registerSchema = z.object({
   companySlug: z.string().regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens allowed'),
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z
+    .string()
+    .max(100, 'Password must be 100 characters or fewer')
+    .regex(PASSWORD_COMPLEXITY_REGEX, PASSWORD_REQUIREMENTS_MESSAGE),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

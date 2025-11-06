@@ -28,7 +28,11 @@ function renderWithRouter(ui: React.ReactElement, { initialEntries = ['/'] } = {
 
 // Define ProtectedRoute component inline for testing (matches App.tsx implementation)
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, hasHydrated } = useAuthStore();
+
+  if (!hasHydrated) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
@@ -54,6 +58,7 @@ describe('ProtectedRoute Component', () => {
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      hasHydrated: false,
     });
   });
 
@@ -62,6 +67,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: false,
+        hasHydrated: true,
       });
 
       renderWithRouter(
@@ -88,6 +94,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: true,
         isLoading: false,
+        hasHydrated: true,
         user: {
           id: 'user-1',
           email: 'test@example.com',
@@ -122,6 +129,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: true,
+        hasHydrated: true,
       });
 
       renderWithRouter(
@@ -145,10 +153,37 @@ describe('ProtectedRoute Component', () => {
       expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
     });
 
+    it('should avoid redirecting before authentication hydration completes', () => {
+      useAuthStore.setState({
+        isAuthenticated: false,
+        isLoading: false,
+        hasHydrated: false,
+      });
+
+      renderWithRouter(
+        <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/protected"
+              element={
+                <ProtectedRoute>
+                  <ProtectedContent />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>,
+        { initialEntries: ['/protected'] }
+      );
+
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
+    });
+
     it('should transition from loading to authenticated state', async () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: true,
+        hasHydrated: true,
       });
 
       const { rerender } = renderWithRouter(
@@ -173,6 +208,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: true,
         isLoading: false,
+        hasHydrated: true,
         user: {
           id: 'user-1',
           email: 'test@example.com',
@@ -208,6 +244,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: true,
+        hasHydrated: true,
       });
 
       const { rerender } = renderWithRouter(
@@ -232,6 +269,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: false,
+        hasHydrated: true,
       });
 
       rerender(
@@ -262,6 +300,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: false,
+        hasHydrated: true,
       });
 
       const Dashboard = () => <div>Dashboard</div>;
@@ -299,6 +338,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: true,
         isLoading: false,
+        hasHydrated: true,
         user: {
           id: 'user-1',
           email: 'test@example.com',
@@ -337,6 +377,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: false,
+        hasHydrated: true,
       });
 
       renderWithRouter(
@@ -366,6 +407,7 @@ describe('ProtectedRoute Component', () => {
         isLoading: false,
         user: null,  // Edge case: token exists but user is null
         token: 'mock-token',
+        hasHydrated: true,
       });
 
       renderWithRouter(
@@ -393,6 +435,7 @@ describe('ProtectedRoute Component', () => {
         isLoading: false,
         user: null,
         token: 'expired-token',  // Token exists but auth failed
+        hasHydrated: true,
       });
 
       renderWithRouter(
@@ -421,6 +464,7 @@ describe('ProtectedRoute Component', () => {
       useAuthStore.setState({
         isAuthenticated: false,
         isLoading: true,
+        hasHydrated: true,
       });
 
       renderWithRouter(

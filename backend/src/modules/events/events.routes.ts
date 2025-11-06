@@ -7,11 +7,13 @@ import {
   deleteEvent,
   closeEvent,
   joinEvent,
+  leaveEvent,
+  getEventOrders,
   checkCompletion,
 } from './events.controller';
 import { validate } from '../../middleware/validation';
 import { createEventSchema, updateEventSchema } from './events.validation';
-import { authMiddleware } from '../../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../../middleware/auth';
 
 const router = Router();
 
@@ -20,11 +22,13 @@ router.use(authMiddleware);
 
 router.get('/', getEvents);
 router.get('/:id', getEvent);
-router.post('/', validate(createEventSchema), createEvent);
+router.get('/:id/orders', getEventOrders);
+router.post('/', adminMiddleware, validate(createEventSchema), createEvent);
 router.patch('/:id', validate(updateEventSchema), updateEvent);
 router.delete('/:id', deleteEvent);
 router.post('/:id/close', closeEvent);
 router.post('/:id/join', joinEvent);
+router.post('/:id/leave', leaveEvent);
 router.post('/:id/check-completion', checkCompletion);
 
 export default router;

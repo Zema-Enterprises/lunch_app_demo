@@ -76,7 +76,8 @@ export async function shouldNotifyUser(
     case 'EVENT_DELIVERED':
       return settings.notifyOnEventCompleted;
     case 'USER_JOINED_EVENT':
-      return true; // Always notify event creator when someone joins
+    case 'USER_LEFT_EVENT':
+      return true; // Always notify event creator when someone joins/leaves
     default:
       return true; // Default to notify for unknown types
   }
