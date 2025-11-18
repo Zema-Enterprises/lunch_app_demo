@@ -1,5 +1,27 @@
 # LunchSync - Deployment Guide
 
+## Quick Links
+
+- **[Staging Deployment Guide](./STAGING_DEPLOYMENT.md)** - Deploy to Railway/Render in 10 minutes
+- **[Platform Comparison](./PLATFORM_COMPARISON.md)** - Railway vs Render vs DigitalOcean vs Fly.io
+- **Local Development** - Instructions below
+
+---
+
+## 🚀 Deploying to Staging?
+
+**Read this first:** [STAGING_DEPLOYMENT.md](./STAGING_DEPLOYMENT.md)
+
+We recommend **Railway.app** for staging:
+- ✅ 10-minute setup
+- ✅ All services included (backend, frontend, PostgreSQL, Redis)
+- ✅ Auto-deploy from GitHub
+- ✅ $0-10/month cost
+
+---
+
+## Local Development Setup
+
 ## Prerequisites
 
 - Node.js 20+ installed

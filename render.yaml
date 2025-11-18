@@ -1,0 +1,65 @@
+services:
+  # Backend API
+  - type: web
+    name: lunchsync-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    region: oregon
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lunchsync-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: lunchsync-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        fromService:
+          name: lunchsync-frontend
+          type: web
+          property: url
+      - key: NOTIFICATIONS_REDIS_URL
+        fromService:
+          name: lunchsync-redis
+          type: redis
+          property: connectionString
+      - key: NOTIFICATIONS_REDIS_TLS
+        value: true
+    healthCheckPath: /health
+
+  # Frontend Web App
+  - type: web
+    name: lunchsync-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    region: oregon
+    plan: starter
+    dockerCommand: nginx -g 'daemon off;'
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+
+databases:
+  # PostgreSQL
+  - name: lunchsync-db
+    plan: starter
+    databaseName: lunchsync
+    user: lunchsync
+    region: oregon
+
+  # Redis
+  - name: lunchsync-redis
+    plan: starter
+    region: oregon
+    ipAllowList: []
