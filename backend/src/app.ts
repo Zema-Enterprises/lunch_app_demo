@@ -33,26 +33,35 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+type OriginRule = string | RegExp;
+
 const parseOrigins = (origins?: string) =>
   origins
     ?.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-const productionOrigins =
-  parseOrigins(process.env.FRONTEND_URL) || [
-    'http://localhost:3001',
-    'https://frontend-shinbulahs-projects.vercel.app',
-  ];
+const productionOriginRules: OriginRule[] = [
+  ...(parseOrigins(process.env.FRONTEND_URL) || ['http://localhost:3001']),
+  /^https:\/\/frontend-[a-z0-9-]+\.vercel\.app$/i,
+];
 
 const developmentOrigins = ['http://localhost:3001', 'http://localhost:3000'];
 
-const allowedOrigins = env.NODE_ENV === 'production' ? productionOrigins : developmentOrigins;
+const allowedOrigins: OriginRule[] =
+  env.NODE_ENV === 'production' ? productionOriginRules : developmentOrigins;
+
+const isAllowedOrigin = (origin?: string) => {
+  if (!origin) return true; // allow same-origin / server-to-server calls
+  return allowedOrigins.some((rule) =>
+    rule instanceof RegExp ? rule.test(origin) : rule === origin
+  );
+};
 
 // CORS - allow configured frontend hosts and Vercel staging
 const corsOptions: CorsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
