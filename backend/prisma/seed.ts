@@ -6,6 +6,15 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting database seed...');
 
+  const existingCompany = await prisma.company.findUnique({
+    where: { domain: 'demo.com' },
+  });
+
+  if (existingCompany) {
+    console.log('Seed data already exists, skipping to keep existing records intact.');
+    return;
+  }
+
   // Create demo company
   const company = await prisma.company.create({
     data: {
