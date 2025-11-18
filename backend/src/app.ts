@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -33,11 +33,31 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// CORS - tighten for production
-const corsOptions = {
-  origin: env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'http://localhost:3001'
-    : ['http://localhost:3001', 'http://localhost:3000'],
+const parseOrigins = (origins?: string) =>
+  origins
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const productionOrigins =
+  parseOrigins(process.env.FRONTEND_URL) || [
+    'http://localhost:3001',
+    'https://frontend-shinbulahs-projects.vercel.app',
+  ];
+
+const developmentOrigins = ['http://localhost:3001', 'http://localhost:3000'];
+
+const allowedOrigins = env.NODE_ENV === 'production' ? productionOrigins : developmentOrigins;
+
+// CORS - allow configured frontend hosts and Vercel staging
+const corsOptions: CorsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
