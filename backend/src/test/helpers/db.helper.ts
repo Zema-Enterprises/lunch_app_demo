@@ -14,6 +14,12 @@ export async function cleanupTestData(companyId: string) {
 
   try {
     // Delete in correct order due to foreign key constraints
+    await prisma.tenantInvite.deleteMany({
+      where: {
+        companyId,
+      },
+    });
+
     await prisma.notificationDeliveryReceipt.deleteMany({
       where: {
         companyId,
@@ -185,6 +191,13 @@ export async function getDatabaseStats() {
     orders,
     restaurants,
   };
+}
+
+export async function cleanupInvites(companyId: string) {
+  if (!companyId) return;
+  await prisma.tenantInvite.deleteMany({
+    where: { companyId },
+  });
 }
 
 /**

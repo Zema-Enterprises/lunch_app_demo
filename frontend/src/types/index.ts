@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'MANAGER' | 'USER';
   companyId: string;
 }
 
@@ -90,6 +90,21 @@ export interface AuthResponse {
   token: string;
   user: User;
   company: Company;
+}
+
+export type InviteStatus = 'PENDING' | 'REDEEMED' | 'REVOKED' | 'EXPIRED';
+
+export interface TenantInvite {
+  id: string;
+  email: string;
+  role: 'ADMIN' | 'MANAGER' | 'USER';
+  note?: string | null;
+  companyId: string;
+  expiresAt: string;
+  redeemedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+  status: InviteStatus;
 }
 
 // Notification types

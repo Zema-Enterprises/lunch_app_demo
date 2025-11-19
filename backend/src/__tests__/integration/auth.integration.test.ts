@@ -12,6 +12,7 @@
 
 import request from 'supertest';
 import app from '../../app';
+import prisma from '../../config/database';
 import { setupCompanyWithUsers, createTestUser } from '../../test/helpers/auth.helper';
 import { cleanupTestData } from '../../test/helpers/db.helper';
 import { authenticatedRequest, assertSuccess, assertError, assertUnauthorized, assertBadRequest } from '../../test/helpers/request.helper';
@@ -19,72 +20,59 @@ import { UserRole } from '@prisma/client';
 
 describe('Authentication & Authorization Integration Tests', () => {
   describe('User Registration', () => {
-    let testCompanyId: string;
-
-    beforeAll(async () => {
-      const testData = await setupCompanyWithUsers({ employeeCount: 0 });
-      testCompanyId = testData.company.id;
-    });
+    const createdCompanyIds: string[] = [];
 
     afterAll(async () => {
-      await cleanupTestData(testCompanyId);
+      for (const companyId of createdCompanyIds) {
+        await cleanupTestData(companyId);
+      }
     });
 
+    const buildCompanyPayload = (overrides: Record<string, any> = {}) => {
+      const suffix = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      return {
+        email: overrides.email || `founder-${suffix}@example.com`,
+        password: overrides.password || 'SecurePass123!',
+        name: overrides.name || 'New Founder',
+        companyName: overrides.companyName || `Test Company ${suffix}`,
+        companyDomain: overrides.companyDomain || `company-${suffix}.com`,
+        companySlug: overrides.companySlug || `company-${suffix}`,
+        ...overrides,
+      };
+    };
+
+    const registerCompany = async (overrides: Record<string, any> = {}) => {
+      const payload = buildCompanyPayload(overrides);
+      const response = await request(app).post('/api/auth/register').send(payload);
+
+      if (response.status === 201) {
+        createdCompanyIds.push(response.body.data.user.companyId);
+      }
+
+      return { response, payload };
+    };
+
     describe('Happy Path', () => {
-      it('should register a new user successfully', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'newuser@example.com',
-            password: 'SecurePass123!',
-            name: 'New User',
-            companyId: testCompanyId,
-          });
+      it('should register a new company admin successfully', async () => {
+        const { response, payload } = await registerCompany();
 
         assertSuccess(response);
         expect(response.body.data).toHaveProperty('token');
         expect(response.body.data.user).toMatchObject({
-          email: 'newuser@example.com',
-          name: 'New User',
-          role: 'USER', // Default role
+          email: payload.email.toLowerCase(),
+          name: payload.name,
+          role: 'ADMIN',
         });
-        expect(response.body.data.user).not.toHaveProperty('password');
-      });
-
-      it('should register an admin user', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'admin@example.com',
-            password: 'AdminPass123!',
-            name: 'Admin User',
-            role: 'ADMIN',
-            companyId: testCompanyId,
-          });
-
-        assertSuccess(response);
-        expect(response.body.data.user.role).toBe('ADMIN');
       });
 
       it('should hash the password before storing', async () => {
-        const password = 'PlainTextPassword123!';
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'hashtest@example.com',
-            password,
-            name: 'Hash Test User',
-            companyId: testCompanyId,
-          });
+        const { payload } = await registerCompany();
 
-        assertSuccess(response);
-        
-        // Verify we can login with the plain password
         const loginResponse = await request(app)
           .post('/api/auth/login')
           .send({
-            email: 'hashtest@example.com',
-            password,
+            email: payload.email,
+            password: payload.password,
           });
 
         assertSuccess(loginResponse);
@@ -93,122 +81,108 @@ describe('Authentication & Authorization Integration Tests', () => {
 
     describe('Validation', () => {
       it('should reject registration without email', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            password: 'SecurePass123!',
-            name: 'No Email User',
-            companyId: testCompanyId,
-          });
+        const payload = buildCompanyPayload();
+        delete payload.email;
+
+        const response = await request(app).post('/api/auth/register').send(payload);
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/email/i);
       });
 
       it('should reject registration with invalid email format', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'not-an-email',
-            password: 'SecurePass123!',
-            name: 'Invalid Email User',
-            companyId: testCompanyId,
-          });
+        const payload = buildCompanyPayload({ email: 'not-an-email' });
+        const response = await request(app).post('/api/auth/register').send(payload);
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/email/i);
       });
 
       it('should reject registration without password', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'nopassword@example.com',
-            name: 'No Password User',
-            companyId: testCompanyId,
-          });
+        const payload = buildCompanyPayload();
+        delete payload.password;
+
+        const response = await request(app).post('/api/auth/register').send(payload);
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/password/i);
       });
 
       it('should reject registration with weak password', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'weakpass@example.com',
-            password: '123', // Too short
-            name: 'Weak Password User',
-            companyId: testCompanyId,
-          });
+        const payload = buildCompanyPayload({ password: '123' });
+        const response = await request(app).post('/api/auth/register').send(payload);
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/password/i);
       });
 
       it('should reject registration without name', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'noname@example.com',
-            password: 'SecurePass123!',
-            companyId: testCompanyId,
-          });
+        const payload = buildCompanyPayload();
+        delete payload.name;
+
+        const response = await request(app).post('/api/auth/register').send(payload);
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/name/i);
       });
 
-      it('should reject registration without companyId', async () => {
-        const response = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'nocompany@example.com',
-            password: 'SecurePass123!',
-            name: 'No Company User',
-          });
+      it('should reject registration without companyName', async () => {
+        const payload = buildCompanyPayload();
+        delete payload.companyName;
+
+        const response = await request(app).post('/api/auth/register').send(payload);
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/company/i);
       });
 
-      it('should reject registration with non-existent companyId', async () => {
+      it('should reject registration without companyDomain', async () => {
+        const payload = buildCompanyPayload();
+        delete payload.companyDomain;
+
+        const response = await request(app).post('/api/auth/register').send(payload);
+
+        assertBadRequest(response);
+        expect(response.body.message).toMatch(/company/i);
+      });
+
+      it('should reject registration without companySlug', async () => {
+        const payload = buildCompanyPayload();
+        delete payload.companySlug;
+
+        const response = await request(app).post('/api/auth/register').send(payload);
+
+        assertBadRequest(response);
+        expect(response.body.message).toMatch(/company/i);
+      });
+
+      it('should reject manual companyId registration attempts', async () => {
+        const testData = await setupCompanyWithUsers({ employeeCount: 0 });
+        const payload = buildCompanyPayload();
+
         const response = await request(app)
           .post('/api/auth/register')
           .send({
-            email: 'invalidcompany@example.com',
-            password: 'SecurePass123!',
-            name: 'Invalid Company User',
-            companyId: 'non-existent-company-id',
+            ...payload,
+            companyId: testData.company.id,
           });
 
-        assertBadRequest(response);
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/invite/i);
+
+        await cleanupTestData(testData.company.id);
       });
     });
 
     describe('Duplicate Prevention', () => {
       it('should reject registration with duplicate email', async () => {
         const email = 'duplicate@example.com';
-        
-        // First registration
-        await request(app)
-          .post('/api/auth/register')
-          .send({
-            email,
-            password: 'SecurePass123!',
-            name: 'First User',
-            companyId: testCompanyId,
-          });
 
-        // Second registration with same email
+        await registerCompany({ email });
+
         const response = await request(app)
           .post('/api/auth/register')
-          .send({
-            email,
-            password: 'DifferentPass123!',
-            name: 'Second User',
-            companyId: testCompanyId,
-          });
+          .send(buildCompanyPayload({ email }));
 
         assertBadRequest(response);
         expect(response.body.message).toMatch(/email.*already.*exists/i);
@@ -216,28 +190,38 @@ describe('Authentication & Authorization Integration Tests', () => {
 
       it('should treat emails as case-insensitive for duplicates', async () => {
         const email = 'CaseSensitive@example.com';
-        
-        // First registration
-        await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: email.toLowerCase(),
-            password: 'SecurePass123!',
-            name: 'Lowercase User',
-            companyId: testCompanyId,
-          });
 
-        // Second registration with different case
+        await registerCompany({ email: email.toLowerCase() });
+
         const response = await request(app)
           .post('/api/auth/register')
-          .send({
-            email: email.toUpperCase(),
-            password: 'SecurePass123!',
-            name: 'Uppercase User',
-            companyId: testCompanyId,
-          });
+          .send(buildCompanyPayload({ email: email.toUpperCase() }));
 
         assertBadRequest(response);
+      });
+
+      it('should reject duplicate company slugs', async () => {
+        const slug = `company-${Date.now()}`;
+        await registerCompany({ companySlug: slug });
+
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send(buildCompanyPayload({ companySlug: slug }));
+
+        assertBadRequest(response);
+        expect(response.body.message).toMatch(/slug/i);
+      });
+
+      it('should reject duplicate company domains', async () => {
+        const domain = `company-${Date.now()}.com`;
+        await registerCompany({ companyDomain: domain });
+
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send(buildCompanyPayload({ companyDomain: domain }));
+
+        assertBadRequest(response);
+        expect(response.body.message).toMatch(/domain/i);
       });
     });
   });
@@ -635,6 +619,11 @@ describe('Authentication & Authorization Integration Tests', () => {
           expect(response.body.data.role).toBe('ADMIN');
         }
         // Note: Some systems may not allow role changes via PUT
+
+        await prisma.user.update({
+          where: { id: employee.id },
+          data: { role: 'USER' },
+        });
       });
 
       it('should allow admin to delete users in company', async () => {

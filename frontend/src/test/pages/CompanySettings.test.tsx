@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CompanySettings from '@/pages/CompanySettings';
 import { renderWithProviders } from '../utils/test-utils';
-import { createMockUser, createMockCompany } from '../utils/factories';
+import { createMockUser, createMockCompany, createMockInvite } from '../utils/factories';
 
 // Mock hooks
 vi.mock('@/lib/api/hooks', () => ({
@@ -11,15 +11,30 @@ vi.mock('@/lib/api/hooks', () => ({
   useUpdateCompany: vi.fn(),
   useCompanyUsers: vi.fn(),
   useCompanyStats: vi.fn(),
+  useTenantInvites: vi.fn(),
+  useCreateInvite: vi.fn(),
 }));
 
 vi.mock('@/store/authStore', () => ({
   useAuthStore: vi.fn(),
 }));
 
+vi.mock('@/store/notificationStore', () => ({
+  useNotificationStore: vi.fn(),
+}));
+
 // Import mocked modules
-import { useCompany, useUpdateCompany, useCompanyUsers, useCompanyStats } from '@/lib/api/hooks';
+import { useCompany, useUpdateCompany, useCompanyUsers, useCompanyStats, useTenantInvites, useCreateInvite } from '@/lib/api/hooks';
 import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
+
+const mockClipboard = {
+  writeText: vi.fn(),
+};
+
+Object.assign(navigator, {
+  clipboard: mockClipboard,
+});
 
 describe('CompanySettings', () => {
   const mockAdmin = createMockUser({ role: 'ADMIN' });
@@ -42,9 +57,18 @@ describe('CompanySettings', () => {
     isError: false,
     error: null,
   };
+  const mockCreateInviteMutation = {
+    mutateAsync: vi.fn(),
+    isPending: false,
+  };
+  const mockAddToast = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAddToast.mockReset();
+    mockCreateInviteMutation.mutateAsync.mockReset();
+    mockClipboard.writeText.mockReset();
+    mockClipboard.writeText.mockResolvedValue(undefined);
     
     (useAuthStore as any).mockReturnValue({
       user: mockAdmin,
@@ -68,6 +92,17 @@ describe('CompanySettings', () => {
       data: mockStats,
       isLoading: false,
       isError: false,
+    });
+
+    (useTenantInvites as any).mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+
+    (useCreateInvite as any).mockReturnValue(mockCreateInviteMutation);
+
+    (useNotificationStore as any).mockReturnValue({
+      addToast: mockAddToast,
     });
   });
 
@@ -149,6 +184,53 @@ describe('CompanySettings', () => {
       const editButton = screen.getByRole('button', { name: /^edit$/i });
       expect(editButton).toBeInTheDocument();
       expect(editButton).toBeEnabled();
+    });
+  });
+
+  describe('Invitations', () => {
+    it('should render invitations section for admins', () => {
+      (useTenantInvites as any).mockReturnValue({
+        data: [createMockInvite({ email: 'pending@test.com' })],
+        isLoading: false,
+      });
+
+      renderWithProviders(<CompanySettings />);
+
+      expect(screen.getByText('Team Invitations')).toBeInTheDocument();
+      expect(screen.getByText('pending@test.com')).toBeInTheDocument();
+    });
+
+    it('should submit invite form', async () => {
+      const user = userEvent.setup();
+      const mutateSpy = vi.fn().mockResolvedValue({
+        token: 'invite-token',
+        invite: createMockInvite(),
+      });
+      (useCreateInvite as any).mockReturnValue({
+        mutateAsync: mutateSpy,
+        isPending: false,
+      });
+
+      renderWithProviders(<CompanySettings />);
+
+      await user.type(screen.getByPlaceholderText('teammate@example.com'), 'invitee@example.com');
+      await user.click(screen.getByRole('button', { name: /send invite/i }));
+
+      expect(mutateSpy).toHaveBeenCalledWith({
+        email: 'invitee@example.com',
+        role: 'USER',
+        note: '',
+      });
+    });
+
+    it('should hide invitations section for non-admins', () => {
+      (useAuthStore as any).mockReturnValue({
+        user: mockUser,
+      });
+
+      renderWithProviders(<CompanySettings />);
+
+      expect(screen.queryByText('Team Invitations')).not.toBeInTheDocument();
     });
   });
 

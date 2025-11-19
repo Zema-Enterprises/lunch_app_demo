@@ -3,15 +3,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
 import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import {
   useCompany,
   useUpdateCompany,
   useCompanyUsers,
   useCompanyStats,
+  useTenantInvites,
+  useCreateInvite,
 } from '@/lib/api/hooks';
-import { Building, Users, Calendar, TrendingUp } from 'lucide-react';
-import { format } from 'date-fns';
+import { Building, Users, Calendar, TrendingUp, MailPlus } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { TenantInvite } from '@/types';
+
+const inviteRoleOptions: { value: TenantInvite['role']; label: string }[] = [
+  { value: 'USER', label: 'Team Member' },
+  { value: 'MANAGER', label: 'Manager' },
+  { value: 'ADMIN', label: 'Administrator' },
+];
 
 export default function CompanySettings() {
   const { user } = useAuthStore();
@@ -21,6 +32,9 @@ export default function CompanySettings() {
   const { data: users, isLoading: usersLoading } = useCompanyUsers();
   const { data: stats, isLoading: statsLoading } = useCompanyStats();
   const updateCompanyMutation = useUpdateCompany();
+  const { addToast } = useNotificationStore();
+  const { data: invites, isLoading: invitesLoading } = useTenantInvites({ enabled: isAdmin });
+  const createInviteMutation = useCreateInvite();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,6 +42,13 @@ export default function CompanySettings() {
     domain: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    role: 'USER',
+    note: '',
+  });
+  const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [lastInviteLink, setLastInviteLink] = useState<string | null>(null);
 
   useEffect(() => {
     if (company) {
@@ -51,6 +72,102 @@ export default function CompanySettings() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const validateInviteForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!inviteForm.email || !inviteForm.email.includes('@')) {
+      newErrors.email = 'Enter a valid email address';
+    }
+
+    setInviteErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInviteCopy = async (link: string) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+        addToast({ type: 'success', message: 'Invite link copied to clipboard' });
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+    } catch {
+      addToast({ type: 'info', message: 'Copy failed. Use the link below instead.' });
+    }
+  };
+
+  const handleInviteSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validateInviteForm()) {
+      return;
+    }
+
+    try {
+      const result = await createInviteMutation.mutateAsync(inviteForm);
+      const inviteLink = new URL(`/invite/${result.token}`, window.location.origin).toString();
+      setLastInviteLink(inviteLink);
+      await handleInviteCopy(inviteLink);
+      setInviteForm({
+        email: '',
+        role: 'USER',
+        note: '',
+      });
+      setInviteErrors({});
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        'Failed to send invite. Please try again.';
+      setInviteErrors({ form: message });
+    }
+  };
+
+  const getStatusVariant = (status: TenantInvite['status']) => {
+    switch (status) {
+      case 'PENDING':
+        return 'secondary';
+      case 'REDEEMED':
+        return 'success';
+      case 'REVOKED':
+        return 'destructive';
+      case 'EXPIRED':
+      default:
+        return 'outline';
+    }
+  };
+
+  const describeInviteTimeline = (invite: TenantInvite) => {
+    if (invite.status === 'PENDING') {
+      return `Expires ${formatDistanceToNow(new Date(invite.expiresAt), {
+        addSuffix: true,
+      })}`;
+    }
+
+    if (invite.status === 'REDEEMED' && invite.redeemedAt) {
+      return `Redeemed ${formatDistanceToNow(new Date(invite.redeemedAt), {
+        addSuffix: true,
+      })}`;
+    }
+
+    if (invite.status === 'REVOKED' && invite.revokedAt) {
+      return `Revoked ${formatDistanceToNow(new Date(invite.revokedAt), {
+        addSuffix: true,
+      })}`;
+    }
+
+    return invite.status === 'EXPIRED' ? 'Expired' : 'Updated';
+  };
+
+  const inviteRoleLabel = (role: TenantInvite['role']) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'Admin';
+      case 'MANAGER':
+        return 'Manager';
+      default:
+        return 'Member';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,6 +203,7 @@ export default function CompanySettings() {
   }
 
   const hasChanges = formData.name !== company?.name || formData.domain !== company?.domain;
+  const invitesToRender = invites ?? [];
 
   return (
     <div className="space-y-6">
@@ -240,6 +358,136 @@ export default function CompanySettings() {
               </div>
             </div>
           ) : null}
+        </Card>
+      )}
+
+      {/* Invitations */}
+      {isAdmin && (
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <MailPlus className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Team Invitations</h2>
+              <p className="text-sm text-gray-600">
+                Invite teammates to join your company. Invites expire after seven days.
+              </p>
+            </div>
+          </div>
+
+          <form className="grid gap-4 md:grid-cols-[2fr,1fr] md:gap-6" onSubmit={handleInviteSubmit} noValidate>
+            <div>
+              <label htmlFor="invite-email" className="text-sm font-medium block mb-1">
+                Email
+              </label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="teammate@example.com"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                className={inviteErrors.email ? 'border-red-500' : ''}
+              />
+              {inviteErrors.email && (
+                <p className="text-sm text-red-500 mt-1">{inviteErrors.email}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="invite-role" className="text-sm font-medium block mb-1">
+                Role
+              </label>
+              <Select
+                id="invite-role"
+                value={inviteForm.role}
+                onChange={(e) =>
+                  setInviteForm({
+                    ...inviteForm,
+                    role: e.target.value as TenantInvite['role'],
+                  })
+                }
+              >
+                {inviteRoleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="invite-note" className="text-sm font-medium block mb-1">
+                Message (optional)
+              </label>
+              <Input
+                id="invite-note"
+                placeholder="Add a note for your teammate"
+                value={inviteForm.note}
+                onChange={(e) => setInviteForm({ ...inviteForm, note: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <Button type="submit" disabled={createInviteMutation.isPending}>
+                {createInviteMutation.isPending ? 'Sending...' : 'Send Invite'}
+              </Button>
+            </div>
+          </form>
+          {inviteErrors.form && (
+            <div className="mt-4 p-3 rounded-md bg-red-50 border border-red-200 text-sm text-red-700" role="alert">
+              {inviteErrors.form}
+            </div>
+          )}
+          {lastInviteLink && (
+            <div className="mt-4 rounded-md border border-dashed border-gray-300 p-4 bg-gray-50">
+              <p className="text-sm font-medium text-gray-700">Latest invite link:</p>
+              <code className="block text-sm break-all text-gray-900 mt-1">{lastInviteLink}</code>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={() => handleInviteCopy(lastInviteLink)}
+              >
+                Copy link again
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold">Recent invites</h3>
+              <span className="text-sm text-gray-500">
+                Showing {invitesToRender.length} invitation{invitesToRender.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            {invitesLoading ? (
+              <div className="text-center text-gray-500 py-6">Loading invitations...</div>
+            ) : invitesToRender.length > 0 ? (
+              <div className="space-y-3">
+                {invitesToRender.map((invite) => (
+                  <div key={invite.id} className="border rounded-lg p-4">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{invite.email}</p>
+                        <p className="text-sm text-gray-500">{inviteRoleLabel(invite.role)}</p>
+                      </div>
+                      <Badge variant={getStatusVariant(invite.status)}>{invite.status}</Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between text-sm text-gray-600 gap-2">
+                      <span>{describeInviteTimeline(invite)}</span>
+                      {invite.note && (
+                        <span className="italic text-gray-500 truncate max-w-lg">
+                          “{invite.note}”
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-6">
+                No invites yet. Use the form above to invite your first teammate.
+              </div>
+            )}
+          </div>
         </Card>
       )}
 

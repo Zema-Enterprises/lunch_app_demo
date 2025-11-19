@@ -152,7 +152,7 @@ describe('Authentication Controller', () => {
       expect(response.body).toHaveProperty('errors');
     });
 
-    it('should not allow self-elevating role when joining existing company', async () => {
+    it('should reject attempts to join existing company without invite', async () => {
       const newUserEmail = `member-${Date.now()}@example.com`;
       const response = await request(app)
         .post('/api/auth/register')
@@ -162,14 +162,13 @@ describe('Authentication Controller', () => {
           name: 'Member User',
           companyId,
           role: 'ADMIN',
+          companyName: 'Shadow Company',
+          companyDomain: `shadow-${Date.now()}.com`,
+          companySlug: `shadow-${Date.now()}`,
         })
-        .expect(201);
+        .expect(400);
 
-      registeredEmails.push(newUserEmail.toLowerCase());
-
-      expect(response.body).toHaveProperty('data');
-      expect(response.body.data).toHaveProperty('user');
-      expect(response.body.data.user.role).toBe('USER');
+      expect(response.body.message).toMatch(/invite/i);
     });
   });
 

@@ -57,7 +57,12 @@ services:
       DATABASE_URL: postgresql://lunchsync:lunchsync123@postgres:5432/lunchsync
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRES_IN: 7d
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: https://localhost:3000
+      INVITE_EMAIL_PROVIDER: resend
+      INVITE_TTL_DAYS: 7
+      INVITE_EMAIL_FROM: "LunchSync Invites <onboarding@resend.dev>"
+      INVITE_EMAIL_REPLY_TO: "support@zemaenterprises.com"
+      RESEND_API_KEY: re_8Sr2KdG6_BVErtnZvdivcgPVkEHqbb5BY
       NOTIFICATIONS_REDIS_URL: redis://redis:6379
       NOTIFICATIONS_REDIS_TLS: "false"
     ports:
@@ -107,4 +112,3 @@ volumes:
 networks:
   lunchsync-network:
     driver: bridge
-

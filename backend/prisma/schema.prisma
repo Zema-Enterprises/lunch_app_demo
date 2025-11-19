@@ -24,11 +24,13 @@ model Company {
   events      Event[]
   deliveryReceipts NotificationDeliveryReceipt[]
   pushSubscriptions PushSubscription[]
+  invites     TenantInvite[]
 }
 
 // Users
 enum UserRole {
   ADMIN
+  MANAGER
   USER
 }
 
@@ -50,6 +52,9 @@ model User {
   deliveryReceipts     NotificationDeliveryReceipt[]
   pushSubscriptions    PushSubscription[]
   refreshTokens        RefreshToken[]
+  sentInvites          TenantInvite[]            @relation("InviteInviter")
+  revokedInvites       TenantInvite[]            @relation("InviteRevoker")
+  redeemedInvites      TenantInvite[]            @relation("InviteRedeemer")
 }
 
 // Restaurants
@@ -276,4 +281,32 @@ model UserNotificationSettings {
   notifyOnEventCompleted      Boolean @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TenantInvite {
+  id           String   @id @default(cuid())
+  companyId    String
+  inviterId    String
+  email        String
+  role         UserRole @default(USER)
+  note         String?
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  redeemedAt   DateTime?
+  redeemedById String?
+  revokedAt    DateTime?
+  revokedById  String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  inviter    User    @relation("InviteInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  revokedBy  User?   @relation("InviteRevoker", fields: [revokedById], references: [id])
+  redeemedBy User?   @relation("InviteRedeemer", fields: [redeemedById], references: [id])
+
+  @@index([companyId, email])
+  @@index([expiresAt])
+  @@index([redeemedAt])
+  @@index([revokedAt])
 }

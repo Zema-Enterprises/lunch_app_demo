@@ -14,6 +14,7 @@ interface AuthState {
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   clearAuth: () => void;
+  setAuthSession: (token: string, user: User) => void;
 }
 
 interface RegisterData {
@@ -56,6 +57,18 @@ export const useAuthStore = create<AuthState>((set, get) => {
       });
     },
 
+    setAuthSession: (token: string, user: User) => {
+      setAccessToken(token);
+      set({
+        user,
+        company: null,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        hasHydrated: true,
+      });
+    },
+
     login: async (email: string, password: string) => {
       set({ isLoading: true });
       try {
@@ -65,16 +78,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         });
 
         const { token, user } = response.data.data;
-        setAccessToken(token);
-
-        set({
-          user,
-          company: null,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-          hasHydrated: true,
-        });
+        get().setAuthSession(token, user);
       } catch (error) {
         set({ isLoading: false });
         throw error;
@@ -86,17 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         const response = await apiClient.post<{ data: { token: string; user: User } }>('/auth/register', data);
         const { token, user } = response.data.data;
-
-        setAccessToken(token);
-
-        set({
-          user,
-          company: null,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-          hasHydrated: true,
-        });
+        get().setAuthSession(token, user);
       } catch (error) {
         set({ isLoading: false });
         throw error;

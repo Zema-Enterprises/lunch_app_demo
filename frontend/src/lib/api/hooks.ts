@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from './client';
-import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary } from '../../types';
+import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User } from '../../types';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNotificationsRealtimeStore, selectNotificationsRefetchInterval } from '../../store/notificationsRealtimeStore';
 
@@ -461,6 +461,44 @@ export const useCompanyStats = () => {
     queryKey: ['company', 'stats'],
     queryFn: async () => {
       const response = await apiClient.get('/users/company/stats');
+      return response.data.data;
+    },
+  });
+};
+
+export const useTenantInvites = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['company', 'invites'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: TenantInvite[] }>('/admin/invites');
+      return response.data.data;
+    },
+    enabled: options?.enabled ?? true,
+  });
+};
+
+export const useCreateInvite = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
+
+  return useMutation({
+    mutationFn: async (data: { email: string; role: 'ADMIN' | 'MANAGER' | 'USER'; note?: string }) => {
+      const response = await apiClient.post<{ data: { invite: TenantInvite; token: string } }>('/admin/invites', data);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company', 'invites'] });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Failed to send invite' });
+    },
+  });
+};
+
+export const useRedeemInvite = () => {
+  return useMutation({
+    mutationFn: async (data: { token: string; name: string; password: string }) => {
+      const response = await apiClient.post<{ data: { token: string; user: User } }>('/auth/invites/redeem', data);
       return response.data.data;
     },
   });

@@ -163,6 +163,9 @@ const Register: React.FC = () => {
                 Sign in
               </Link>
             </p>
+            <p className="text-xs text-center text-slate-500">
+              Joining an existing company? Use the invite link sent by your administrator to finish setup.
+            </p>
           </CardFooter>
         </form>
       </Card>

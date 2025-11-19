@@ -6,7 +6,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   companyId: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'MANAGER' | 'USER';
 }
 
 export const generateToken = (payload: JWTPayload): string => {

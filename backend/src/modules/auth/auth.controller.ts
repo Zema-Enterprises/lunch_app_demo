@@ -25,6 +25,18 @@ export const register = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    if (companyId) {
+      return res.status(400).json({
+        message: 'Direct company registration is disabled. Ask your admin for an invite link.',
+      });
+    }
+
+    if (!companyName || !companyDomain || !companySlug) {
+      return res.status(400).json({
+        message: 'Company information required',
+      });
+    }
+
     // Check if user already exists (case-insensitive)
     const existingUser = await prisma.user.findFirst({
       where: { 
@@ -42,69 +54,49 @@ export const register = async (req: AuthRequest, res: Response) => {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    let result;
+    const normalizedSlug = companySlug.toLowerCase();
+    const normalizedDomain = companyDomain.toLowerCase();
 
-    // Check if registering to existing company or creating new one
-    const assignedRole = companyId ? 'USER' : 'ADMIN';
+    // Check if company slug is taken
+    const slugTaken = await prisma.company.findUnique({
+      where: { slug: normalizedSlug },
+    });
 
-    if (companyId) {
-      // Register to existing company
-      const company = await prisma.company.findUnique({
-        where: { id: companyId },
+    if (slugTaken) {
+      return res.status(400).json({ message: 'Company slug already taken' });
+    }
+
+    const domainTaken = await prisma.company.findFirst({
+      where: {
+        domain: normalizedDomain,
+      },
+    });
+
+    if (domainTaken) {
+      return res.status(400).json({ message: 'Company domain already taken' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: companyName,
+          domain: normalizedDomain,
+          slug: normalizedSlug,
+        },
       });
 
-      if (!company) {
-        return res.status(400).json({ message: 'Company not found' });
-      }
-
-      const user = await prisma.user.create({
+      const user = await tx.user.create({
         data: {
           email: email.toLowerCase(),
           password: hashedPassword,
           name,
-          role: assignedRole,
-          companyId,
+          role: 'ADMIN',
+          companyId: company.id,
         },
       });
 
-      result = { company, user };
-    } else {
-      // Create new company and admin user
-      if (!companyName || !companyDomain || !companySlug) {
-        return res.status(400).json({ message: 'Company information required' });
-      }
-
-      // Check if company slug is taken
-      const existingCompany = await prisma.company.findUnique({
-        where: { slug: companySlug },
-      });
-
-      if (existingCompany) {
-        return res.status(400).json({ message: 'Company slug already taken' });
-      }
-
-      result = await prisma.$transaction(async (tx) => {
-        const company = await tx.company.create({
-          data: {
-            name: companyName,
-            domain: companyDomain,
-            slug: companySlug,
-          },
-        });
-
-        const user = await tx.user.create({
-          data: {
-            email: email.toLowerCase(),
-            password: hashedPassword,
-            name,
-            role: assignedRole,
-            companyId: company.id,
-          },
-        });
-
-        return { company, user };
-      });
-    }
+      return { company, user };
+    });
 
     const refresh = await issueRefreshToken(result.user.id, {
       userAgent: req.headers['user-agent'],

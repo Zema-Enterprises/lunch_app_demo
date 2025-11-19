@@ -10,6 +10,7 @@ import eventRoutes from './modules/events/events.routes';
 import orderRoutes from './modules/orders/orders.routes';
 import userRoutes from './modules/users/users.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
+import inviteRoutes from './modules/invites/invites.routes';
 import { env } from './config/env';
 
 const app = express();
@@ -117,6 +118,7 @@ app.use('/api/events', orderRoutes); // Event-specific order routes (/:eventId/o
 app.use('/api/orders', orderRoutes); // User order routes (/me)
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin/invites', inviteRoutes);
 
 // Error handling (must be last)
 app.use(errorHandler);

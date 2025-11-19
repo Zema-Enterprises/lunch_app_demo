@@ -18,6 +18,7 @@ const Orders = lazy(() => import('./pages/Orders'));
 const SettingsLayout = lazy(() => import('./pages/SettingsLayout'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const CompanySettings = lazy(() => import('./pages/CompanySettings'));
+const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
 
 // Notification components
 const NotificationList = lazy(() => import('./components/notifications/NotificationList'));
@@ -67,6 +68,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/invite/:token" element={<AcceptInvite />} />
             
             <Route
               path="/"

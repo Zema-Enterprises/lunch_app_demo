@@ -9,11 +9,10 @@ export const registerSchema = z.object({
       .max(100, 'Password must be 100 characters or fewer')
       .regex(PASSWORD_COMPLEXITY_REGEX, PASSWORD_REQUIREMENTS_MESSAGE),
     name: z.string().min(1).max(100),
+    companyName: z.string().min(1).max(100),
+    companyDomain: z.string().min(1).max(100),
+    companySlug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
     companyId: z.string().optional(),
-    role: z.enum(['ADMIN', 'USER']).optional(),
-    companyName: z.string().min(1).max(100).optional(),
-    companyDomain: z.string().min(1).max(100).optional(),
-    companySlug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/).optional(),
   }),
 });
 

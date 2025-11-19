@@ -1,4 +1,4 @@
-import { Event, Restaurant, Order, User, MenuItem, OrderItem, EventParticipant, Company, NotificationEvent, UserNotificationSettings, NotificationStats } from '@/types';
+import { Event, Restaurant, Order, User, MenuItem, OrderItem, EventParticipant, Company, NotificationEvent, UserNotificationSettings, NotificationStats, TenantInvite } from '@/types';
 
 // User factory
 export const createMockUser = (overrides?: Partial<User>): User => ({
@@ -18,6 +18,20 @@ export const createMockCompany = (overrides?: Partial<Company>): Company => ({
   domain: 'testcompany.com',
   slug: 'test-company',
   createdAt: new Date().toISOString(),
+  ...overrides,
+});
+
+export const createMockInvite = (overrides?: Partial<TenantInvite>): TenantInvite => ({
+  id: 'invite-1',
+  email: 'pending@example.com',
+  role: 'USER',
+  note: 'Welcome aboard',
+  companyId: 'company-1',
+  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  redeemedAt: null,
+  revokedAt: null,
+  createdAt: new Date().toISOString(),
+  status: 'PENDING',
   ...overrides,
 });
 
