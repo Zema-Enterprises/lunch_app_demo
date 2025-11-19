@@ -42,7 +42,11 @@ export default function CompanySettings() {
     domain: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [inviteForm, setInviteForm] = useState({
+  const [inviteForm, setInviteForm] = useState<{
+    email: string;
+    role: TenantInvite['role'];
+    note: string;
+  }>({
     email: '',
     role: 'USER',
     note: '',
