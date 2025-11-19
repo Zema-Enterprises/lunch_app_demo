@@ -55,6 +55,7 @@ This directory contains all testing-related documentation for the LunchSync proj
 4. Track progress: [PROGRESS.md](./PROGRESS.md)
 
 ### For Understanding API Changes
+- Tenant invite guardrails: [`API_ADJUSTMENTS_TENANT_INVITES.md`](./API_ADJUSTMENTS_TENANT_INVITES.md)
 - Authentication changes: [`archive/API_ADJUSTMENTS_AUTH.md`](./archive/API_ADJUSTMENTS_AUTH.md)
 - Event management changes: [`archive/API_ADJUSTMENTS_EVENTS.md`](./archive/API_ADJUSTMENTS_EVENTS.md)
 - Order management changes: [`archive/API_ADJUSTMENTS_ORDERS.md`](./archive/API_ADJUSTMENTS_ORDERS.md)

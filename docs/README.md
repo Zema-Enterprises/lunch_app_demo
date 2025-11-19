@@ -38,8 +38,9 @@ docs/
 3. **[API Adjustments](./testing/)** - Examples of API changes from tests
 
 ### Understanding API Changes
-- **[Auth API Changes](./testing/API_ADJUSTMENTS_AUTH.md)** - Phase 1.1 authentication changes
-- **[Event API Changes](./testing/API_ADJUSTMENTS_EVENTS.md)** - Phase 1.2 event management changes
+- **[Tenant Invite Guardrails](./testing/API_ADJUSTMENTS_TENANT_INVITES.md)** - Phase 1 invite-only onboarding rollout
+- **[Auth API Changes](./testing/archive/API_ADJUSTMENTS_AUTH.md)** - Phase 1.1 authentication changes
+- **[Event API Changes](./testing/archive/API_ADJUSTMENTS_EVENTS.md)** - Phase 1.2 event management changes
 - **[Frontend Compatibility](./testing/FRONTEND_COMPATIBILITY_ANALYSIS.md)** - Breaking changes analysis
 - **[Bug Fixes](./testing/BUG_FIX_USER_STATS_ROUTE.md)** - Route ordering and other fixes
 
