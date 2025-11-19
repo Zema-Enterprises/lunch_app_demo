@@ -20,7 +20,7 @@
 
 ## Recommended Approach: Hybrid Deployment
 
-### Best Option: Vercel (Frontend) + Railway/Render (Backend)
+### Best Option: Vercel (Frontend) + Render (Backend)
 
 **Why?**
 - Frontend on Vercel = Blazing fast, global CDN, perfect for React
@@ -32,7 +32,7 @@
 
 ---
 
-## Option 1: Hybrid (Vercel + Railway) - RECOMMENDED
+## Option 1: Hybrid (Vercel + Render) - RECOMMENDED
 
 ### Frontend on Vercel
 
@@ -99,26 +99,26 @@ Or use Vercel Dashboard:
 2. Import your GitHub repository
 3. Select `/frontend` as root directory
 4. Set environment variable:
-   - `VITE_API_URL` = `https://your-backend.up.railway.app/api`
+   - `VITE_API_URL` = `https://<render-backend>.onrender.com/api`
 5. Deploy
 
-### Backend on Railway
+### Backend on Render
 
-Follow the Railway setup from `STAGING_DEPLOYMENT.md`:
-1. Deploy backend to Railway
-2. Add PostgreSQL & Redis
-3. Configure environment variables
-4. Copy backend URL
+Follow the Render setup from `STAGING_DEPLOYMENT.md`:
+1. Provision PostgreSQL + Redis on Render
+2. Create a backend web service from `/backend`
+3. Configure environment variables (DATABASE_URL, REDIS_URL, FRONTEND_URL, etc.)
+4. Copy the Render backend URL (e.g., `https://lunchsync-api.onrender.com`)
 
 ### Connect Them
 
 1. **Update Frontend Environment on Vercel:**
    - Go to Vercel Dashboard → Settings → Environment Variables
-   - Set `VITE_API_URL` = `https://<railway-backend-url>/api`
+   - Set `VITE_API_URL` = `https://<render-backend-url>/api`
    - Redeploy
 
-2. **Update Backend CORS on Railway:**
-   - Go to Railway Dashboard → Backend Service → Variables
+2. **Update Backend CORS on Render:**
+   - Go to Render Dashboard → Backend Service → Environment
    - Set `FRONTEND_URL` = `https://<vercel-frontend-url>`
    - Redeploy
 

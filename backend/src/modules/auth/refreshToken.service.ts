@@ -6,12 +6,14 @@ import { env } from '../../config/env';
 const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
 const DEFAULT_REFRESH_TTL_DAYS = env.REFRESH_TOKEN_EXPIRES_IN_DAYS ?? 30;
 const REFRESH_TOKEN_TTL_MS = DEFAULT_REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
+const COOKIE_SECURE = env.REFRESH_TOKEN_COOKIE_SECURE;
+const COOKIE_SAME_SITE: 'none' | 'lax' = COOKIE_SECURE ? 'none' : 'lax';
 const COOKIE_BASE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'strict' as const,
+  sameSite: COOKIE_SAME_SITE,
   path: '/',
+  secure: COOKIE_SECURE,
 };
-const COOKIE_SECURE = env.REFRESH_TOKEN_COOKIE_SECURE;
 
 export class RefreshTokenError extends Error {
   constructor(message = 'Invalid refresh token') {
@@ -112,7 +114,6 @@ export const revokeRefreshToken = async (tokenValue: string | null | undefined) 
 export const setRefreshTokenCookie = (res: Response, token: string, expiresAt: Date) => {
   res.cookie(REFRESH_TOKEN_COOKIE_NAME, token, {
     ...COOKIE_BASE_OPTIONS,
-    secure: COOKIE_SECURE,
     expires: expiresAt,
   });
 };
@@ -120,7 +121,6 @@ export const setRefreshTokenCookie = (res: Response, token: string, expiresAt: D
 export const clearRefreshTokenCookie = (res: Response) => {
   res.cookie(REFRESH_TOKEN_COOKIE_NAME, '', {
     ...COOKIE_BASE_OPTIONS,
-    secure: COOKIE_SECURE,
     expires: new Date(0),
     maxAge: 0,
   });

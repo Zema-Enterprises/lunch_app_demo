@@ -2,106 +2,84 @@
 
 ## Recommended Options (Easiest to Hardest)
 
-### 🥇 Option 1: Railway.app (RECOMMENDED - Easiest)
+### 🥇 Option 1: Render (Backend + DB + Redis) + Vercel (Frontend) — **Recommended**
 
-**Why Railway:**
-- ✅ One-click multi-service deployment
-- ✅ Built-in PostgreSQL & Redis (no config needed)
-- ✅ Auto-deploys from GitHub on push
-- ✅ Free $5/month credit (enough for staging)
-- ✅ Environment variables GUI
-- ✅ Automatic HTTPS
+This mirrors our live staging stack:
 
-**Setup Time:** ~10 minutes
-
-#### Steps:
-
-1. **Prepare Production Dockerfiles**
-   - Railway will use our Dockerfiles (create production versions below)
-
-2. **Deploy to Railway**
-   ```bash
-   # Install Railway CLI (optional)
-   npm i -g @railway/cli
-   railway login
-   
-   # OR use Railway Dashboard (easier)
-   # Go to https://railway.app
-   ```
-
-3. **Create New Project**
-   - Click "New Project" → "Deploy from GitHub repo"
-   - Select your `lunch.app` repository
-   - Railway auto-detects services
-
-4. **Add Services**
-   - **PostgreSQL**: Click "+ New" → "Database" → "PostgreSQL"
-   - **Redis**: Click "+ New" → "Database" → "Redis"
-   - **Backend**: Auto-detected from `/backend`
-   - **Frontend**: Auto-detected from `/frontend`
-
-5. **Configure Environment Variables**
-   
-   **Backend Service:**
-   ```env
-   NODE_ENV=production
-   PORT=5000
-   DATABASE_URL=${{Postgres.DATABASE_URL}}  # Auto-populated
-   REDIS_URL=${{Redis.REDIS_URL}}           # Auto-populated
-   JWT_SECRET=<generate-random-secret>
-   JWT_EXPIRES_IN=7d
-   FRONTEND_URL=${{Frontend.RAILWAY_PUBLIC_DOMAIN}}
-   NOTIFICATIONS_REDIS_URL=${{Redis.REDIS_URL}}
-   NOTIFICATIONS_REDIS_TLS=true
-   ```
-
-   **Frontend Service:**
-   ```env
-   NODE_ENV=production
-   VITE_API_URL=https://${{Backend.RAILWAY_PUBLIC_DOMAIN}}/api
-   ```
-
-6. **Deploy**
-   - Railway auto-deploys on every push to `main`
-   - Monitor logs in Railway dashboard
-
-**URLs:**
-- Frontend: `https://your-app.up.railway.app`
-- Backend: `https://your-api.up.railway.app`
-
----
-
-### 🥈 Option 2: Render.com (Easy, More Control)
-
-**Why Render:**
-- ✅ Good free tier (750 hours/month)
-- ✅ Built-in PostgreSQL & Redis
-- ✅ Blueprint YAML for infrastructure as code
-- ✅ Auto-deploys from GitHub
-- ✅ Better monitoring than Railway
+- Render hosts the **Node/Express API**, **PostgreSQL**, and **Redis**
+- Vercel serves the **Vite frontend** from the global Edge network
+- GitHub → Render/Vercel auto‑deploy keeps both halves in sync
 
 **Setup Time:** ~15 minutes
 
-#### Steps:
+#### 1. Deploy backend + databases on Render
 
-1. **Create `render.yaml` Blueprint** (see below)
+1. **Create resources**
+   - Log into [Render](https://dashboard.render.com)
+   - Click **New → PostgreSQL** → name it `lunchsync-db` (free tier is fine)
+   - Click **New → Redis** → name it `lunchsync-redis`
+   - Click **New → Web Service**
+     - Repo: `Zema-Enterprises/lunch_app_demo`
+     - Root dir: `backend`
+     - Runtime: Node 20 (Render default)
+     - Build command: `npm ci && npm run build`
+     - Start command: `npm run db:migrate && npm run db:seed && npm run start`
 
-2. **Deploy to Render**
-   - Go to https://render.com
-   - Click "New" → "Blueprint"
-   - Connect GitHub repo
-   - Select `render.yaml`
+2. **Environment variables (Backend web service)**
+   ```env
+   NODE_ENV=production
+   PORT=5000
+   DATABASE_URL=<<Render Postgres Internal URL>>
+   JWT_SECRET=<<generate secure secret>>
+   JWT_EXPIRES_IN=7d
+   REDIS_URL=<<Render Redis connection string>>
+   NOTIFICATIONS_REDIS_URL=<<same as REDIS_URL>>
+   NOTIFICATIONS_REDIS_TLS=true
+   FRONTEND_URL=https://frontend-<project>.vercel.app
+   ```
+   Tips:
+   - Use the “Add from service” buttons in Render to link the Postgres/Redis URLs.
+   - `FRONTEND_URL` accepts a comma separated list; include your production Vercel domain and any preview hostnames if needed.
 
-3. **Render Creates:**
-   - PostgreSQL database
-   - Redis instance
-   - Backend web service
-   - Frontend static site
+3. **Run migrations once**
+   - Render executes `npm run db:migrate && npm run db:seed` at every deploy. The seed script is idempotent and will skip if demo data already exists.
 
-**Note:** Free tier has limitations:
-- Services spin down after 15 min inactivity
-- Cold starts take ~30 seconds
-- Fine for staging, not production
+4. **Verify**
+   - After the service goes green, hit `https://<render-backend>.onrender.com/health`.
+   - API routes live under `/api/...` (e.g., `/api/auth/login`).
+
+#### 2. Deploy frontend on Vercel
+
+1. **Import repo**
+   - Go to [Vercel](https://vercel.com/new) → import the GitHub repo.
+   - Set **Root Directory** to `frontend`.
+   - Build command: `npm run build`
+   - Output directory: `dist`
+
+2. **Environment variables**
+   - Add `VITE_API_URL=https://<render-backend>.onrender.com/api` for both `Production` and `Preview`.
+   - Important: include `/api` so the client hits the correct Express routes.
+
+3. **Deploy**
+   - Run `vercel --prod` from `frontend/` or use the dashboard deploy button.
+   - Once live, update the backend `FRONTEND_URL` (if not already done) with the final Vercel domain so CORS allows it.
+
+4. **Smoke test**
+   - Visit the Vercel URL, log in with the seeded credentials (`admin@demo.com` / `password123`), and confirm API calls resolve to Render.
+
+#### 3. Optional automation
+
+- Enable auto-deploys from the `main` branch on both Render and Vercel.
+- Use `render deploys create ...` after merging to force a redeploy if needed.
+
+---
+
+### 🥈 Option 2: Railway.app (Alternative)
+
+Railway can still run the entire stack inside one project (backend + DB + Redis + frontend).
+
+- Follow the previous Option 1 instructions if you prefer Railway’s UX.
+- Remember to set `FRONTEND_URL` to the Railway frontend domain and `VITE_API_URL` to the Railway backend domain with `/api`.
 
 ---
 

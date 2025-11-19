@@ -12,11 +12,11 @@
 
 **Read this first:** [STAGING_DEPLOYMENT.md](./STAGING_DEPLOYMENT.md)
 
-We recommend **Railway.app** for staging:
-- ✅ 10-minute setup
-- ✅ All services included (backend, frontend, PostgreSQL, Redis)
-- ✅ Auto-deploy from GitHub
-- ✅ $0-10/month cost
+We now recommend a **Render + Vercel hybrid** for staging:
+- ✅ Render hosts API + PostgreSQL + Redis with one blueprint
+- ✅ Vercel serves the SPA globally with preview deployments
+- ✅ GitHub auto-deploys keep both halves in sync
+- ✅ Entire stack runs for $0 on the free tiers (with cold starts)
 
 ---
 
@@ -161,29 +161,41 @@ npx serve -s frontend/dist -p 3000
 
 ## Deployment Options
 
-### Option 1: Deploy to Vercel (Frontend) + Railway (Backend)
+### Option 1: Deploy backend to Render + frontend to Vercel (Recommended)
+
+#### Backend (Render)
+
+1. **Create databases**
+   - New → PostgreSQL → copy the internal connection string.
+   - New → Redis → copy the TLS connection string.
+2. **Create the web service**
+   - New → Web Service → root directory `backend`
+   - Build command: `npm ci && npm run build`
+   - Start command: `npm run db:migrate && npm run db:seed && npm run start`
+3. **Env vars**
+   ```env
+   NODE_ENV=production
+   PORT=5000
+   DATABASE_URL=<<Render Postgres internal URL>>
+   JWT_SECRET=<<generated secret>>
+   JWT_EXPIRES_IN=7d
+   REDIS_URL=<<Render Redis URL>>
+   NOTIFICATIONS_REDIS_URL=<<same as REDIS_URL>>
+   NOTIFICATIONS_REDIS_TLS=true
+   FRONTEND_URL=https://your-vercel-domain.vercel.app
+   ```
+4. **Deploy** – Render builds on each push to `main`. Confirm `/health` returns 200.
 
 #### Frontend (Vercel)
 
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Set build settings:
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-   - Root Directory: `frontend`
-4. Add environment variable:
-   - `VITE_API_URL`: Your Railway backend URL
+1. Import the repo, choose root `frontend`, build `npm run build`, output `dist`.
+2. Add environment variables (Production + Preview):
+   ```env
+   VITE_API_URL=https://<render-backend>.onrender.com/api
+   ```
+3. Deploy (`vercel --prod`). Update `FRONTEND_URL` on Render if the Vercel domain changes.
 
-#### Backend (Railway)
-
-1. Connect repository to Railway
-2. Set root directory to `backend`
-3. Add environment variables:
-   - `DATABASE_URL`: (Railway will provide PostgreSQL)
-   - `JWT_SECRET`: Generate a secure secret
-   - `PORT`: 5000
-   - `NODE_ENV`: production
-4. Deploy
+This setup keeps API <-> UI contracts aligned with the same GitHub branch and mirrors our staging environment.
 
 ### Option 2: Deploy to Heroku
 
