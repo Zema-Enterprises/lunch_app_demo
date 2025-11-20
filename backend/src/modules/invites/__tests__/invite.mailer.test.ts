@@ -7,14 +7,18 @@ const basePayload: InviteEmailPayload = {
   role: 'USER',
 };
 
-const setupMailer = async () => {
+const setupMailer = async (overrides: Record<string, string> = {}) => {
   jest.resetModules();
 
-  process.env.NODE_ENV = 'development';
-  process.env.INVITE_EMAIL_PROVIDER = 'resend';
-  process.env.RESEND_API_KEY = 'test-resend-key';
-  process.env.INVITE_EMAIL_FROM = 'LunchSync Invites <onboarding@resend.dev>';
-  process.env.INVITE_EMAIL_REPLY_TO = 'support@zemaenterprises.com';
+  process.env = {
+    ...process.env,
+    NODE_ENV: 'development',
+    INVITE_EMAIL_PROVIDER: 'resend',
+    RESEND_API_KEY: 'test-resend-key',
+    INVITE_EMAIL_FROM: 'LunchSync Invites <onboarding@resend.dev>',
+    INVITE_EMAIL_REPLY_TO: 'support@zemaenterprises.com',
+    ...overrides,
+  };
 
   const mockSend = jest.fn();
 
@@ -26,7 +30,7 @@ const setupMailer = async () => {
     })),
   }));
 
-  const module = await import('../invite.mailer');
+  const module = require('../invite.mailer');
   return { sendInviteEmail: module.sendInviteEmail, mockSend };
 };
 
@@ -49,5 +53,20 @@ describe('sendInviteEmail', () => {
     });
 
     await expect(sendInviteEmail(basePayload)).rejects.toThrow(/Domain not verified/);
+  });
+
+  it('validates the From address format before sending', async () => {
+    const { sendInviteEmail, mockSend } = await setupMailer({
+      INVITE_EMAIL_FROM: 'invalid-from-value',
+    });
+
+    mockSend.mockResolvedValue({
+      data: { id: 'test-id' },
+      error: null,
+      headers: {},
+    });
+
+    await expect(sendInviteEmail(basePayload)).rejects.toThrow(/from address/i);
+    expect(mockSend).not.toHaveBeenCalled();
   });
 });

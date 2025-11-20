@@ -15,6 +15,9 @@ import { env } from './config/env';
 
 const app = express();
 
+// When running behind a proxy (e.g., Render/NGINX), trust the forwarded headers
+app.set('trust proxy', env.TRUST_PROXY);
+
 // Security middleware - should be first
 app.use(helmet({
   contentSecurityPolicy: {

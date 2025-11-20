@@ -64,8 +64,21 @@ export const sendInviteEmail = async (payload: InviteEmailPayload) => {
     throw new Error('Resend API key is not configured for invite emails.');
   }
 
+  const fromAddress = env.INVITE_EMAIL_FROM?.trim();
+  if (!fromAddress) {
+    throw new Error('Invite from address is not configured');
+  }
+
+  const fromFormat =
+    /^[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+$/i.test(fromAddress) ||
+    /^.+\s<[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+>$/i.test(fromAddress);
+
+  if (!fromFormat) {
+    throw new Error('Invite from address is not in a valid format: use "Name <email@domain>" or "email@domain"');
+  }
+
   const response = await resendClient.emails.send({
-    from: env.INVITE_EMAIL_FROM,
+    from: fromAddress,
     to: payload.email,
     subject: `You're invited to join ${payload.companyName} on LunchSync`,
     html: buildHtml(payload),

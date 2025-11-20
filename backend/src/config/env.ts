@@ -51,4 +51,5 @@ export const env = {
   INVITE_EMAIL_FROM: process.env.INVITE_EMAIL_FROM || 'LunchSync Invites <onboarding@resend.dev>',
   INVITE_EMAIL_REPLY_TO: process.env.INVITE_EMAIL_REPLY_TO || 'onboarding@resend.dev',
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  TRUST_PROXY: parsePositiveInt(process.env.TRUST_PROXY, nodeEnv === 'production' ? 1 : 0),
 };
