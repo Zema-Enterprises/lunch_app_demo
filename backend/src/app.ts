@@ -45,8 +45,32 @@ const parseOrigins = (origins?: string) =>
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const normalizeOrigin = (origin: string) => origin.replace(/\/$/, '');
+
+const withWwwVariant = (origins: string[]): string[] => {
+  const expanded = new Set<string>();
+
+  origins.forEach((origin) => {
+    const normalized = normalizeOrigin(origin);
+    expanded.add(normalized);
+
+    try {
+      const url = new URL(normalized);
+      if (!url.hostname.startsWith('www.')) {
+        const wwwUrl = new URL(normalized);
+        wwwUrl.hostname = `www.${url.hostname}`;
+        expanded.add(normalizeOrigin(wwwUrl.toString()));
+      }
+    } catch {
+      expanded.add(normalized);
+    }
+  });
+
+  return Array.from(expanded);
+};
+
 const productionOriginRules: OriginRule[] = [
-  ...(parseOrigins(process.env.FRONTEND_URL) || ['http://localhost:3001']),
+  ...withWwwVariant(parseOrigins(process.env.FRONTEND_URL) || ['http://localhost:3001']),
   /^https:\/\/frontend-[a-z0-9-]+\.vercel\.app$/i,
 ];
 
