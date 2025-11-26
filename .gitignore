@@ -67,3 +67,6 @@ prisma/migrations/**/migration.sql.backup
 # Build outputs
 *.tsbuildinfo
 .vercel
+
+# Generated media
+backend/storage/**/*.webp

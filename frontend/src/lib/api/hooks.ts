@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from './client';
-import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User } from '../../types';
+import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User, CompanyTheme } from '../../types';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNotificationsRealtimeStore, selectNotificationsRefetchInterval } from '../../store/notificationsRealtimeStore';
 
@@ -480,7 +480,7 @@ export const useTenantInvites = (options?: { enabled?: boolean }) => {
 export const useCreateInvite = () => {
   const queryClient = useQueryClient();
   const { addToast } = useNotificationStore();
-
+  
   return useMutation({
     mutationFn: async (data: { email: string; role: 'ADMIN' | 'MANAGER' | 'USER'; note?: string }) => {
       const response = await apiClient.post<{ data: { invite: TenantInvite; token: string } }>('/admin/invites', data);
@@ -491,6 +491,60 @@ export const useCreateInvite = () => {
     },
     onError: () => {
       addToast({ type: 'error', message: 'Failed to send invite' });
+    },
+  });
+};
+
+// Company Theme
+export const useCompanyTheme = () => {
+  return useQuery({
+    queryKey: ['companyTheme'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: CompanyTheme }>('/theme');
+      return response.data.data;
+    },
+  });
+};
+
+export const useUpdateCompanyTheme = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
+
+  return useMutation({
+    mutationFn: async (data: Partial<Pick<CompanyTheme, 'primaryColor' | 'secondaryColor' | 'backgroundColor'>> & { useCover?: boolean }) => {
+      const response = await apiClient.put<{ data: CompanyTheme }>('/admin/theme', data);
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['companyTheme'], data);
+      addToast({ type: 'success', message: 'Theme updated' });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Failed to update theme' });
+    },
+  });
+};
+
+export const useUploadThemeCover = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('cover', file);
+      const response = await apiClient.post<{ data: CompanyTheme }>('/admin/theme/cover', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['companyTheme'], data);
+      addToast({ type: 'success', message: 'Cover photo updated' });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Failed to upload cover photo';
+      addToast({ type: 'error', message });
     },
   });
 };

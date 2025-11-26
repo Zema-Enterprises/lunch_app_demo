@@ -10,6 +10,9 @@ vi.mock('@/lib/api/hooks', () => ({
   useEvent: vi.fn(() => ({ data: null, isLoading: false })),
   useUpdateEvent: vi.fn(() => ({ mutateAsync: vi.fn() })),
   useRestaurants: vi.fn(() => ({ data: [], isLoading: false })),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 // Mock accessibility hooks

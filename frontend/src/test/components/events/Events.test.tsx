@@ -21,6 +21,9 @@ vi.mock('@/lib/api/hooks', () => ({
   useCreateEvent: vi.fn(() => ({ mutateAsync: vi.fn() })),
   useUpdateEvent: vi.fn(() => ({ mutateAsync: vi.fn() })),
   useEvent: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 const renderEvents = (options?: { initialEntries?: Array<string | { pathname: string; state?: any }> }) => {

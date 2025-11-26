@@ -9,6 +9,9 @@ import { createMockEvent, createMockRestaurant, createMockMenuItem } from '../..
 vi.mock('@/lib/api/hooks', () => ({
   useCreateOrder: vi.fn(),
   useMenuItems: vi.fn(),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 describe('OrderModal - Rendering & Structure', () => {

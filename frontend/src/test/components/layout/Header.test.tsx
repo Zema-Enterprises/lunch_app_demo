@@ -205,7 +205,8 @@ describe('Header Component', () => {
       render(<Header />);
 
       const header = screen.getByRole('banner');
-      expect(header).toHaveClass('border-b', 'border-gray-200');
+      expect(header).toHaveClass('border-b');
+      expect(header).toHaveStyle({ borderColor: 'rgb(15, 23, 42)' });
     });
 
     it('should have mobile navigation component', () => {

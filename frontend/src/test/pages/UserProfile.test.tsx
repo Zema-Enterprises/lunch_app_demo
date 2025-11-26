@@ -9,6 +9,9 @@ import { createMockUser } from '../utils/factories';
 vi.mock('@/lib/api/hooks', () => ({
   useUpdateProfile: vi.fn(),
   useChangePassword: vi.fn(),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 vi.mock('@/store/authStore', () => ({

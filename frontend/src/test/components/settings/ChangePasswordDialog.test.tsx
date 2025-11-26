@@ -8,6 +8,9 @@ import { PASSWORD_REQUIREMENTS_MESSAGE, PASSWORD_REQUIREMENTS_HINT } from '@/lib
 // Mock hooks
 vi.mock('@/lib/api/hooks', () => ({
   useChangePassword: vi.fn(),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 // Import mocked modules

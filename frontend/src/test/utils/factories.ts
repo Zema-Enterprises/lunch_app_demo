@@ -1,4 +1,4 @@
-import { Event, Restaurant, Order, User, MenuItem, OrderItem, EventParticipant, Company, NotificationEvent, UserNotificationSettings, NotificationStats, TenantInvite } from '@/types';
+import { Event, Restaurant, Order, User, MenuItem, OrderItem, EventParticipant, Company, NotificationEvent, UserNotificationSettings, NotificationStats, TenantInvite, CompanyTheme } from '@/types';
 
 // User factory
 export const createMockUser = (overrides?: Partial<User>): User => ({
@@ -198,3 +198,17 @@ export const createMockNotifications = (count: number, options?: { someRead?: bo
     });
   });
 };
+
+export const createMockTheme = (overrides?: Partial<CompanyTheme>): CompanyTheme => ({
+  primaryColor: '#123456',
+  secondaryColor: '#abcdef',
+  backgroundColor: '#f0f0f0',
+  coverPhotoUrl: 'https://example.com/cover.webp',
+  coverPhotoMeta: {
+    width: 1400,
+    height: 600,
+    format: 'webp',
+    size: 150000,
+  },
+  ...overrides,
+});

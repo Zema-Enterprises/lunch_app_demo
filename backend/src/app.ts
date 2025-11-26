@@ -3,6 +3,7 @@ import cors, { CorsOptions } from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { errorHandler } from './middleware/error';
 import authRoutes from './modules/auth/auth.routes';
 import restaurantRoutes from './modules/restaurants/restaurants.routes';
@@ -11,6 +12,7 @@ import orderRoutes from './modules/orders/orders.routes';
 import userRoutes from './modules/users/users.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
 import inviteRoutes from './modules/invites/invites.routes';
+import themeRoutes from './modules/theme/theme.routes';
 import { env } from './config/env';
 
 const app = express();
@@ -125,6 +127,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging
 app.use(morgan('dev'));
 
+// Static assets (local theme uploads)
+app.use(
+  '/uploads/themes',
+  express.static(path.join(process.cwd(), 'storage', 'themes'), {
+    maxAge: env.NODE_ENV === 'production' ? '7d' : 0,
+    etag: true,
+  })
+);
+
 // Apply rate limiting only in non-test environments
 if (env.NODE_ENV !== 'test') {
   app.use('/api/', limiter);
@@ -146,6 +157,7 @@ app.use('/api/orders', orderRoutes); // User order routes (/me)
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/invites', inviteRoutes);
+app.use('/api', themeRoutes);
 
 // Error handling (must be last)
 app.use(errorHandler);

@@ -29,6 +29,9 @@ vi.mock('@/lib/api/hooks', () => ({
   useRestaurants: vi.fn(() => ({ data: [], isLoading: false })),
   useUserStats: vi.fn(() => ({ data: { thisWeekOrders: 0, totalSpent: 0 }, isLoading: false })),
   useNotificationAnalytics: vi.fn(() => ({ data: null, isLoading: false })),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 const renderDashboard = () => {

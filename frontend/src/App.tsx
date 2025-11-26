@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import Layout from './components/layout/Layout';
 import { ToastContainer } from './components/ui/toast';
 import { ErrorBoundary } from './components/error/ErrorBoundary';
+import { ThemeProvider } from './theme/ThemeProvider';
 
 // Lazy load pages for better performance
 const Login = lazy(() => import('./pages/Login'));
@@ -74,7 +75,9 @@ function App() {
               path="/"
               element={
                 <ProtectedRoute>
-                  <Layout />
+                  <ThemeProvider>
+                    <Layout />
+                  </ThemeProvider>
                 </ProtectedRoute>
               }
             >

@@ -9,6 +9,9 @@ import { createMockRestaurant } from '@/test/utils/factories';
 vi.mock('@/lib/api/hooks', () => ({
   useCreateEvent: vi.fn(() => ({ mutateAsync: vi.fn() })),
   useRestaurants: vi.fn(() => ({ data: [], isLoading: false })),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 type DialogProps = Parameters<typeof CreateEventDialog>[0];

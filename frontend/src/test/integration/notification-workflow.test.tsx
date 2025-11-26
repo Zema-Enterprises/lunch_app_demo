@@ -62,6 +62,7 @@ describe('Notification Workflow Integration', () => {
     window.history.pushState({}, '', '/');
 
     server.use(
+      http.post(`${API_BASE_URL}/auth/refresh`, () => new HttpResponse(null, { status: 401 })),
       http.post(`${API_BASE_URL}/auth/login`, async () =>
         HttpResponse.json({
           data: { token: 'test-token', user: mockUser },

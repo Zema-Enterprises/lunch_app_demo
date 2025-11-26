@@ -21,7 +21,11 @@ import { useNotificationQueueStore } from '@/store/notificationQueueStore';
  * - View all notifications link
  * - Empty state when no notifications
  */
-const NotificationBell: React.FC = () => {
+type NotificationBellProps = {
+  tone?: 'default' | 'inverted';
+};
+
+const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -121,13 +125,23 @@ const NotificationBell: React.FC = () => {
     }
   };
 
+  const toneButtonClass =
+    tone === 'inverted'
+      ? 'text-slate-50 hover:text-white hover:bg-white/15'
+      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100';
+
+  const toneBadgeClass =
+    tone === 'inverted'
+      ? 'bg-white text-slate-900 shadow-sm'
+      : 'bg-red-500 text-white';
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell Icon Button */}
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+        className={`relative p-2 rounded-full transition-colors ${toneButtonClass}`}
         aria-label={`Notifications${totalUnreadCount > 0 ? ` (${totalUnreadCount} unread)` : ''}`}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -137,7 +151,7 @@ const NotificationBell: React.FC = () => {
         {/* Badge with unread count */}
         {totalUnreadCount > 0 && (
           <span 
-            className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full"
+            className={`absolute top-1 right-1 flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full ${toneBadgeClass}`}
             aria-live="polite"
             aria-atomic="true"
           >

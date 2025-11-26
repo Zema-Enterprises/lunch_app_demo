@@ -34,6 +34,9 @@ const createMockOrderWithEvent = (orderOverrides?: Partial<Order>, eventOverride
 vi.mock('@/lib/api/hooks', () => ({
   useUserOrders: vi.fn(),
   useCancelOrder: vi.fn(),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 describe('Orders - Rendering & Structure', () => {

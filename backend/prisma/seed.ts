@@ -26,6 +26,15 @@ async function main() {
 
   console.log('Created company:', company.name);
 
+  await prisma.companyTheme.create({
+    data: {
+      companyId: company.id,
+      primaryColor: '#0f172a',
+      secondaryColor: '#22c55e',
+      backgroundColor: '#f8fafc',
+    },
+  });
+
   // Hash password
   const hashedPassword = await bcrypt.hash('password123', 10);
 

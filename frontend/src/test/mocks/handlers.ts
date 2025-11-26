@@ -11,6 +11,22 @@ export const mockUser = {
   companyId: 'company-1',
 };
 
+export const mockCompany = {
+  id: 'company-1',
+  name: 'Mock Company',
+  domain: 'mock.com',
+  slug: 'mock-company',
+  createdAt: new Date().toISOString(),
+};
+
+export const mockTheme = {
+  primaryColor: '#0f172a',
+  secondaryColor: '#22c55e',
+  backgroundColor: '#f8fafc',
+  coverPhotoUrl: null as string | null,
+  coverPhotoMeta: null as any,
+};
+
 export const mockRestaurants = [
   {
     id: 'restaurant-1',
@@ -142,6 +158,43 @@ export const handlers = [
 
   http.get(`${API_URL}/auth/me`, () => {
     return HttpResponse.json({ data: mockUser });
+  }),
+
+  http.get(`${API_URL}/users/company`, () => {
+    return HttpResponse.json({ data: mockCompany });
+  }),
+
+  // Theme
+  http.get(`${API_URL}/theme`, () => {
+    return HttpResponse.json({ data: mockTheme });
+  }),
+
+  http.options(`${API_URL}/theme`, () => {
+    return new HttpResponse(null, { status: 200 });
+  }),
+
+  http.put(`${API_URL}/admin/theme`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    Object.assign(mockTheme, body);
+    return HttpResponse.json({ data: mockTheme });
+  }),
+
+  http.options(`${API_URL}/admin/theme`, () => {
+    return new HttpResponse(null, { status: 200 });
+  }),
+
+  http.post(`${API_URL}/admin/theme/cover`, () => {
+    return HttpResponse.json({
+      data: {
+        ...mockTheme,
+        coverPhotoUrl: 'https://example.com/cover.webp',
+        coverPhotoMeta: { width: 1400, height: 600, format: 'webp', size: 200000 },
+      },
+    });
+  }),
+
+  http.options(`${API_URL}/admin/theme/cover`, () => {
+    return new HttpResponse(null, { status: 200 });
   }),
 
   // Restaurants
@@ -307,6 +360,16 @@ export const handlers = [
         unread: 2, 
         total: 3 
       } 
+    });
+  }),
+
+  http.get(`${API_URL}/notifications/analytics/summary`, () => {
+    return HttpResponse.json({
+      data: {
+        companyId: 'company-1',
+        totals: { notifications: 0, unread: 0 },
+        delivery: {},
+      },
     });
   }),
 

@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CompanySettings from '@/pages/CompanySettings';
 import { renderWithProviders } from '../utils/test-utils';
-import { createMockUser, createMockCompany, createMockInvite } from '../utils/factories';
+import { createMockUser, createMockCompany, createMockInvite, createMockTheme } from '../utils/factories';
 
 // Mock hooks
 vi.mock('@/lib/api/hooks', () => ({
@@ -13,6 +13,9 @@ vi.mock('@/lib/api/hooks', () => ({
   useCompanyStats: vi.fn(),
   useTenantInvites: vi.fn(),
   useCreateInvite: vi.fn(),
+  useCompanyTheme: vi.fn(),
+  useUpdateCompanyTheme: vi.fn(),
+  useUploadThemeCover: vi.fn(),
 }));
 
 vi.mock('@/store/authStore', () => ({
@@ -24,7 +27,7 @@ vi.mock('@/store/notificationStore', () => ({
 }));
 
 // Import mocked modules
-import { useCompany, useUpdateCompany, useCompanyUsers, useCompanyStats, useTenantInvites, useCreateInvite } from '@/lib/api/hooks';
+import { useCompany, useUpdateCompany, useCompanyUsers, useCompanyStats, useTenantInvites, useCreateInvite, useCompanyTheme, useUpdateCompanyTheme, useUploadThemeCover } from '@/lib/api/hooks';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 
@@ -61,7 +64,16 @@ describe('CompanySettings', () => {
     mutateAsync: vi.fn(),
     isPending: false,
   };
+  const mockUpdateThemeMutation = {
+    mutateAsync: vi.fn(),
+    isPending: false,
+  };
+  const mockUploadCoverMutation = {
+    mutateAsync: vi.fn(),
+    isPending: false,
+  };
   const mockAddToast = vi.fn();
+  const mockTheme = createMockTheme();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,6 +116,13 @@ describe('CompanySettings', () => {
     (useNotificationStore as any).mockReturnValue({
       addToast: mockAddToast,
     });
+
+    (useCompanyTheme as any).mockReturnValue({
+      data: mockTheme,
+      isLoading: false,
+    });
+    (useUpdateCompanyTheme as any).mockReturnValue(mockUpdateThemeMutation);
+    (useUploadThemeCover as any).mockReturnValue(mockUploadCoverMutation);
   });
 
   describe('Rendering & Structure', () => {

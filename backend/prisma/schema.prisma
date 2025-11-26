@@ -25,6 +25,7 @@ model Company {
   deliveryReceipts NotificationDeliveryReceipt[]
   pushSubscriptions PushSubscription[]
   invites     TenantInvite[]
+  theme       CompanyTheme?
 }
 
 // Users
@@ -309,4 +310,20 @@ model TenantInvite {
   @@index([expiresAt])
   @@index([redeemedAt])
   @@index([revokedAt])
+}
+
+model CompanyTheme {
+  companyId        String   @id
+  primaryColor     String
+  secondaryColor   String
+  backgroundColor  String
+  coverPhotoUrl    String?
+  coverPhotoWidth  Int?
+  coverPhotoHeight Int?
+  coverPhotoFormat String?
+  coverPhotoSize   Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }

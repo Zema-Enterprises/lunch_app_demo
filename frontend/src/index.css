@@ -5,6 +5,9 @@
 @layer base {
   :root {
     --radius: 0.5rem;
+    --ls-primary: #0f172a;
+    --ls-secondary: #22c55e;
+    --ls-background: #f8fafc;
   }
 }
 

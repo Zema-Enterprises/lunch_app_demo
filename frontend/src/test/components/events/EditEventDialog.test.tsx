@@ -9,6 +9,9 @@ import { createMockEvent, createMockRestaurant } from '@/test/utils/factories';
 vi.mock('@/lib/api/hooks', () => ({
   useUpdateEvent: vi.fn(() => ({ mutateAsync: vi.fn() })),
   useRestaurants: vi.fn(() => ({ data: [], isLoading: false })),
+  useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 const renderEditEventDialog = (event = createMockEvent()) => {

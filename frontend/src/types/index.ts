@@ -173,3 +173,18 @@ export interface NotificationAnalyticsSummary {
   };
   delivery: NotificationDeliveryBreakdown;
 }
+
+export interface ThemeCoverMeta {
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  size?: number | null;
+}
+
+export interface CompanyTheme {
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  coverPhotoUrl: string | null;
+  coverPhotoMeta: ThemeCoverMeta | null;
+}
