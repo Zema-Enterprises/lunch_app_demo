@@ -1,24 +1,16 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { SkipLink } from '../accessibility/SkipLink';
 import { useNotificationsRealtime } from '@/lib/realtime/useNotificationsRealtime';
 import OfflineBanner from './OfflineBanner';
-import { useThemeContext } from '@/theme/ThemeProvider';
 
 const Layout: React.FC = () => {
   useNotificationsRealtime();
-  const { theme } = useThemeContext();
-
-  const backgroundStyle = useMemo(() => {
-    return {
-      backgroundColor: theme.backgroundColor || '#f8fafc',
-    } as React.CSSProperties;
-  }, [theme.backgroundColor]);
 
   return (
-    <div className="min-h-screen" style={backgroundStyle} data-testid="layout-shell">
+    <div className="min-h-screen bg-[#f8fafc]" data-testid="layout-shell">
       <SkipLink />
       <OfflineBanner />
       <Header />
