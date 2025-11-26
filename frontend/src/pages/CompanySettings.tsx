@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
-import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import {
   useCompany,
@@ -14,15 +13,30 @@ import {
   useTenantInvites,
   useCreateInvite,
 } from '@/lib/api/hooks';
-import { Building, Users, Calendar, TrendingUp, MailPlus } from 'lucide-react';
+import {
+  useCompanyTheme,
+  useUpdateCompanyTheme,
+  useUploadThemeCover,
+} from '@/lib/api/hooks';
+import { Building, Users, Calendar, TrendingUp, MailPlus, Palette, Image as ImageIcon, Bell, LogOut, User } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { TenantInvite } from '@/types';
+import { DEFAULT_THEME } from '@/theme/constants';
+import { isColorDark, resolveAssetUrl } from '@/theme/utils';
+import { useAuthStore } from '@/store/authStore';
 
 const inviteRoleOptions: { value: TenantInvite['role']; label: string }[] = [
   { value: 'USER', label: 'Team Member' },
   { value: 'MANAGER', label: 'Manager' },
   { value: 'ADMIN', label: 'Administrator' },
 ];
+
+const createObjectUrlSafe = (file: File) => {
+  if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+    return URL.createObjectURL(file);
+  }
+  return '';
+};
 
 export default function CompanySettings() {
   const { user } = useAuthStore();
@@ -35,6 +49,9 @@ export default function CompanySettings() {
   const { addToast } = useNotificationStore();
   const { data: invites, isLoading: invitesLoading } = useTenantInvites({ enabled: isAdmin });
   const createInviteMutation = useCreateInvite();
+  const { data: theme, isLoading: themeLoading } = useCompanyTheme();
+  const updateThemeMutation = useUpdateCompanyTheme();
+  const uploadCoverMutation = useUploadThemeCover();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,6 +70,16 @@ export default function CompanySettings() {
   });
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
   const [lastInviteLink, setLastInviteLink] = useState<string | null>(null);
+  const [themeForm, setThemeForm] = useState(() => ({
+    primaryColor: theme?.primaryColor ?? DEFAULT_THEME.primaryColor,
+    secondaryColor: theme?.secondaryColor ?? DEFAULT_THEME.secondaryColor,
+    backgroundColor: theme?.backgroundColor ?? DEFAULT_THEME.backgroundColor,
+  }));
+  const [useCover, setUseCover] = useState(() => Boolean(theme?.coverPhotoUrl));
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFileName, setCoverFileName] = useState<string | null>(null);
+  const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+  const [themeErrors, setThemeErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (company) {
@@ -62,6 +89,17 @@ export default function CompanySettings() {
       });
     }
   }, [company]);
+
+  useEffect(() => {
+    if (theme) {
+      setThemeForm({
+        primaryColor: theme.primaryColor,
+        secondaryColor: theme.secondaryColor,
+        backgroundColor: theme.backgroundColor,
+      });
+      setUseCover(Boolean(theme.coverPhotoUrl));
+    }
+  }, [theme]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -86,6 +124,26 @@ export default function CompanySettings() {
     }
 
     setInviteErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateThemeForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    const hexPattern = /^#([0-9a-fA-F]{6})$/;
+
+    if (!hexPattern.test(themeForm.primaryColor)) {
+      newErrors.primaryColor = 'Enter a 6-digit hex color';
+    }
+
+    if (!hexPattern.test(themeForm.secondaryColor)) {
+      newErrors.secondaryColor = 'Enter a 6-digit hex color';
+    }
+
+    if (!hexPattern.test(themeForm.backgroundColor)) {
+      newErrors.backgroundColor = 'Enter a 6-digit hex color';
+    }
+
+    setThemeErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -198,6 +256,65 @@ export default function CompanySettings() {
     setIsEditing(false);
   };
 
+  const handleThemeChange = (key: keyof typeof themeForm, value: string) => {
+    setThemeForm((prev) => ({ ...prev, [key]: value }));
+
+    const isBackgroundChange = key === 'backgroundColor';
+    if (isBackgroundChange) {
+      setUseCover(false);
+      setCoverPreview(null);
+      setCoverFileName(null);
+      setPendingCoverFile(null);
+    }
+  };
+
+  const handleThemeSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!isAdmin) return;
+    if (!validateThemeForm()) return;
+
+    if (pendingCoverFile && useCover) {
+      await uploadCoverMutation.mutateAsync(pendingCoverFile);
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
+      setCoverPreview(null);
+      setPendingCoverFile(null);
+    }
+
+    await updateThemeMutation.mutateAsync({
+      primaryColor: themeForm.primaryColor.toLowerCase(),
+      secondaryColor: themeForm.secondaryColor.toLowerCase(),
+      backgroundColor: themeForm.backgroundColor.toLowerCase(),
+      useCover,
+    });
+
+    setCoverFileName(null);
+  };
+
+  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+    const url = createObjectUrlSafe(file);
+    if (url) {
+      setCoverPreview(url);
+    }
+    setCoverFileName(file.name);
+    setPendingCoverFile(file);
+    setUseCover(true);
+    event.target.value = '';
+  };
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverPreview]);
+
   if (companyLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -208,6 +325,20 @@ export default function CompanySettings() {
 
   const hasChanges = formData.name !== company?.name || formData.domain !== company?.domain;
   const invitesToRender = invites ?? [];
+  const currentTheme = theme ?? DEFAULT_THEME;
+  const hexPattern = /^#([0-9a-fA-F]{6})$/;
+  const isThemeValid =
+    hexPattern.test(themeForm.primaryColor) &&
+    hexPattern.test(themeForm.secondaryColor) &&
+    hexPattern.test(themeForm.backgroundColor);
+  const coverActive = useCover && (coverPreview || currentTheme.coverPhotoUrl);
+  const previewCoverUrl = coverPreview || currentTheme.coverPhotoUrl;
+  const resolvedPreviewCoverUrl = resolveAssetUrl(previewCoverUrl);
+  const previewUsesInvertedTone = coverActive || isColorDark(themeForm.backgroundColor);
+  const previewTextColor = previewUsesInvertedTone ? '#f8fafc' : '#0f172a';
+  const previewSubtleColor = previewUsesInvertedTone ? '#e2e8f0' : themeForm.secondaryColor;
+  const previewNavBackground = previewUsesInvertedTone ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.06)';
+  const previewNavBorder = previewUsesInvertedTone ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(15,23,42,0.12)';
 
   return (
     <div className="space-y-6">
@@ -308,6 +439,211 @@ export default function CompanySettings() {
                 <span className="text-sm">{format(new Date(company.createdAt), 'MMMM d, yyyy')}</span>
               </div>
             )}
+          </div>
+        )}
+      </Card>
+
+      {/* Theme & Branding */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <Palette className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Branding & Theme</h2>
+              <p className="text-sm text-gray-600">Company-wide colors and header cover photo</p>
+            </div>
+          </div>
+          {!isAdmin && <Badge variant="secondary">Admin controlled</Badge>}
+        </div>
+
+        {themeLoading ? (
+          <div className="text-gray-500 text-center py-8">Loading theme...</div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
+            <div className="space-y-4">
+              <div
+                className="rounded-xl border overflow-hidden shadow-sm"
+                data-testid="theme-preview"
+                style={{
+                  backgroundImage: coverActive && resolvedPreviewCoverUrl
+                    ? `linear-gradient(120deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 45%, rgba(15,23,42,0.3) 100%), url(${resolvedPreviewCoverUrl})`
+                    : undefined,
+                  backgroundColor: coverActive ? undefined : themeForm.backgroundColor,
+                  backgroundSize: coverActive ? 'cover' : undefined,
+                  backgroundRepeat: coverActive ? 'no-repeat' : undefined,
+                  backgroundPosition: coverActive ? 'center' : undefined,
+                  height: '72px',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 24px',
+                  borderColor: previewUsesInvertedTone ? 'rgba(255,255,255,0.18)' : themeForm.primaryColor,
+                }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: coverActive
+                      ? 'linear-gradient(120deg, rgba(15,23,42,0.65) 0%, rgba(15,23,42,0.45) 55%, rgba(15,23,42,0.35) 100%)'
+                      : previewUsesInvertedTone
+                        ? 'linear-gradient(120deg, rgba(15,23,42,0.22) 0%, rgba(15,23,42,0.14) 65%, rgba(15,23,42,0.1) 100%)'
+                        : 'transparent',
+                    backdropFilter: coverActive ? 'blur(4px)' : undefined,
+                  }}
+                />
+                <div className="relative flex items-center gap-3 w-full justify-between">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="text-2xl font-bold"
+                      style={{ color: themeForm.primaryColor }}
+                    >
+                      LunchSync
+                    </span>
+                    <span
+                      className="text-sm font-medium hidden sm:inline"
+                      style={{ color: previewSubtleColor }}
+                    >
+                      {company?.name || 'Your Company'}
+                    </span>
+                  </div>
+                  <div
+                    className="flex items-center gap-3 px-4 py-2 rounded-full"
+                    style={{
+                      background: previewNavBackground,
+                      border: previewNavBorder,
+                      backdropFilter: coverActive ? 'blur(8px)' : undefined,
+                    }}
+                  >
+                    <span className="text-sm font-medium flex items-center gap-2" style={{ color: previewTextColor }}>
+                      <User className="w-4 h-4" style={{ color: previewUsesInvertedTone ? '#e2e8f0' : 'rgb(71 85 105)' }} />
+                      {user?.name || 'User Name'}
+                    </span>
+                    {user?.role === 'ADMIN' && (
+                      <span
+                        className="px-2 py-1 text-xs rounded-full"
+                        style={{ background: themeForm.secondaryColor, color: previewUsesInvertedTone ? '#0f172a' : themeForm.primaryColor }}
+                      >
+                        Admin
+                      </span>
+                    )}
+                    <Bell className="w-5 h-5" style={{ color: previewUsesInvertedTone ? '#f8fafc' : '#0f172a' }} />
+                    <LogOut className="w-4 h-4" style={{ color: previewUsesInvertedTone ? '#f8fafc' : '#0f172a' }} />
+                  </div>
+                </div>
+              </div>
+              {coverActive ? (
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <ImageIcon className="h-4 w-4 text-emerald-600" />
+                  <span>
+                    Cover photo set &middot; {currentTheme.coverPhotoMeta?.width}x{currentTheme.coverPhotoMeta?.height}{' '}
+                    {currentTheme.coverPhotoMeta?.format?.toUpperCase() || ''}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Using colors. Upload a cover to brand the header.</p>
+              )}
+              {!useCover && (
+                <p className="text-xs text-gray-500">Header color will be used when no cover photo is active.</p>
+              )}
+            </div>
+
+            <form className="space-y-4" onSubmit={handleThemeSubmit} noValidate>
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Pick header colors or upload a cover photo. Last action wins: uploading a photo enables cover; changing a color uses colors.
+                </p>
+              </div>
+                <div>
+                  <label htmlFor="theme-background" className="text-sm font-medium block mb-1">
+                    Header fill color (used when no cover photo)
+                  </label>
+                  <Input
+                    id="theme-background"
+                    type="color"
+                    value={themeForm.backgroundColor}
+                    onChange={(e) => handleThemeChange('backgroundColor', e.target.value)}
+                    disabled={!isAdmin || updateThemeMutation.isPending}
+                    aria-label="Header fill color"
+                  />
+                  {themeErrors.backgroundColor && (
+                    <p className="text-sm text-red-500 mt-1">{themeErrors.backgroundColor}</p>
+                  )}
+                </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="theme-primary" className="text-sm font-medium block mb-1">
+                    Primary Color
+                  </label>
+                  <Input
+                    id="theme-primary"
+                    type="color"
+                    value={themeForm.primaryColor}
+                    onChange={(e) => handleThemeChange('primaryColor', e.target.value)}
+                    disabled={!isAdmin || updateThemeMutation.isPending}
+                    aria-label="Primary color"
+                  />
+                  {themeErrors.primaryColor && (
+                    <p className="text-sm text-red-500 mt-1">{themeErrors.primaryColor}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="theme-secondary" className="text-sm font-medium block mb-1">
+                    Secondary Color
+                  </label>
+                  <Input
+                    id="theme-secondary"
+                    type="color"
+                    value={themeForm.secondaryColor}
+                    onChange={(e) => handleThemeChange('secondaryColor', e.target.value)}
+                    disabled={!isAdmin || updateThemeMutation.isPending}
+                    aria-label="Secondary color"
+                  />
+                  {themeErrors.secondaryColor && (
+                    <p className="text-sm text-red-500 mt-1">{themeErrors.secondaryColor}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="theme-cover" className="text-sm font-medium block mb-1">
+                  Header Cover Photo (or leave empty to use colors)
+                </label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="theme-cover"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleCoverUpload}
+                    disabled={!isAdmin || uploadCoverMutation.isPending}
+                    aria-label="Upload cover photo"
+                    className="flex-1"
+                  />
+                  {coverFileName && (
+                    <span className="text-xs text-gray-600 truncate" title={coverFileName}>
+                      {coverFileName}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Any aspect ratio; we'll center-crop to fit the header. Minimum 800x400px, max 2MB. PNG, JPG, or WebP.
+                </p>
+              </div>
+
+              {isAdmin && (
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={updateThemeMutation.isPending || !isThemeValid}
+                  >
+                    {updateThemeMutation.isPending ? 'Saving...' : 'Save Theme'}
+                  </Button>
+                </div>
+              )}
+            </form>
           </div>
         )}
       </Card>
