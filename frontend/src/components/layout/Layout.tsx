@@ -13,9 +13,9 @@ const Layout: React.FC = () => {
 
   const backgroundStyle = useMemo(() => {
     return {
-      backgroundColor: '#f8fafc',
+      backgroundColor: theme.backgroundColor || '#f8fafc',
     } as React.CSSProperties;
-  }, []);
+  }, [theme.backgroundColor]);
 
   return (
     <div className="min-h-screen" style={backgroundStyle} data-testid="layout-shell">

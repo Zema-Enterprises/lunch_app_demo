@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { renderWithProviders } from '../utils/test-utils';
@@ -13,8 +13,8 @@ vi.mock('@/lib/api/hooks', () => ({
 describe('ThemeProvider', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    (useCompanyTheme as unknown as vi.Mock).mockReset?.();
-    (useCompanyTheme as unknown as vi.Mock).mockImplementation(() => ({
+    (useCompanyTheme as unknown as Mock).mockReset?.();
+    (useCompanyTheme as unknown as Mock).mockImplementation(() => ({
       data: undefined,
       isLoading: false,
     }));
@@ -28,7 +28,7 @@ describe('ThemeProvider', () => {
       coverPhotoUrl: 'https://example.com/cover.jpg',
     });
 
-    (useCompanyTheme as unknown as vi.Mock).mockReturnValue({
+    (useCompanyTheme as unknown as Mock).mockReturnValue({
       data: theme,
       isLoading: false,
     });
@@ -48,7 +48,7 @@ describe('ThemeProvider', () => {
   });
 
   it('falls back to defaults when theme is unavailable', async () => {
-    (useCompanyTheme as unknown as vi.Mock).mockReturnValue({
+    (useCompanyTheme as unknown as Mock).mockReturnValue({
       data: undefined,
       isLoading: false,
     });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import CompanySettings from '@/pages/CompanySettings';
@@ -47,23 +47,23 @@ const baseTheme = createMockTheme();
 describe('CompanySettings - Theme', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as unknown as vi.Mock).mockReturnValue({ user: baseUser });
+    (useAuthStore as unknown as Mock).mockReturnValue({ user: baseUser });
 
-    (useCompany as unknown as vi.Mock).mockReturnValue({
+    (useCompany as unknown as Mock).mockReturnValue({
       data: baseCompany,
       isLoading: false,
       isError: false,
     });
-    (useUpdateCompany as unknown as vi.Mock).mockReturnValue({
+    (useUpdateCompany as unknown as Mock).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     });
-    (useCompanyUsers as unknown as vi.Mock).mockReturnValue({
+    (useCompanyUsers as unknown as Mock).mockReturnValue({
       data: [],
       isLoading: false,
       isError: false,
     });
-    (useCompanyStats as unknown as vi.Mock).mockReturnValue({
+    (useCompanyStats as unknown as Mock).mockReturnValue({
       data: {
         totalUsers: 0,
         totalEvents: 0,
@@ -73,26 +73,26 @@ describe('CompanySettings - Theme', () => {
       isLoading: false,
       isError: false,
     });
-    (useTenantInvites as unknown as vi.Mock).mockReturnValue({
+    (useTenantInvites as unknown as Mock).mockReturnValue({
       data: [],
       isLoading: false,
     });
-    (useCreateInvite as unknown as vi.Mock).mockReturnValue({
+    (useCreateInvite as unknown as Mock).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     });
 
-    (useCompanyTheme as unknown as vi.Mock).mockReturnValue({
+    (useCompanyTheme as unknown as Mock).mockReturnValue({
       data: baseTheme,
       isLoading: false,
     });
 
-    (useUpdateCompanyTheme as unknown as vi.Mock).mockReturnValue({
+    (useUpdateCompanyTheme as unknown as Mock).mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue(baseTheme),
       isPending: false,
     });
 
-    (useUploadThemeCover as unknown as vi.Mock).mockReturnValue({
+    (useUploadThemeCover as unknown as Mock).mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue(baseTheme),
       isPending: false,
     });
@@ -114,7 +114,7 @@ describe('CompanySettings - Theme', () => {
       mutateAsync: vi.fn().mockResolvedValue(baseTheme),
       isPending: false,
     };
-    (useUpdateCompanyTheme as unknown as vi.Mock).mockReturnValue(updateThemeMock);
+    (useUpdateCompanyTheme as unknown as Mock).mockReturnValue(updateThemeMock);
 
     renderWithProviders(<CompanySettings />);
 
@@ -139,7 +139,7 @@ describe('CompanySettings - Theme', () => {
       mutateAsync: vi.fn().mockResolvedValue({ ...baseTheme, coverPhotoUrl: null, coverPhotoMeta: null }),
       isPending: false,
     };
-    (useUpdateCompanyTheme as unknown as vi.Mock).mockReturnValue(updateThemeMock);
+    (useUpdateCompanyTheme as unknown as Mock).mockReturnValue(updateThemeMock);
 
     renderWithProviders(<CompanySettings />);
 
@@ -161,7 +161,7 @@ describe('CompanySettings - Theme', () => {
       mutateAsync: vi.fn().mockResolvedValue(baseTheme),
       isPending: false,
     };
-    (useUpdateCompanyTheme as unknown as vi.Mock).mockReturnValue(updateThemeMock);
+    (useUpdateCompanyTheme as unknown as Mock).mockReturnValue(updateThemeMock);
 
     renderWithProviders(<CompanySettings />);
 
@@ -187,8 +187,8 @@ describe('CompanySettings - Theme', () => {
       mutateAsync: vi.fn().mockResolvedValue(baseTheme),
       isPending: false,
     };
-    (useUploadThemeCover as unknown as vi.Mock).mockReturnValue(uploadMock);
-    (useUpdateCompanyTheme as unknown as vi.Mock).mockReturnValue(updateThemeMock);
+    (useUploadThemeCover as unknown as Mock).mockReturnValue(uploadMock);
+    (useUpdateCompanyTheme as unknown as Mock).mockReturnValue(updateThemeMock);
 
     renderWithProviders(<CompanySettings />);
 
@@ -212,7 +212,7 @@ describe('CompanySettings - Theme', () => {
   });
 
   it('hides theme controls for non-admin users', () => {
-    (useAuthStore as unknown as vi.Mock).mockReturnValue({ user: createMockUser({ role: 'USER' }) });
+    (useAuthStore as unknown as Mock).mockReturnValue({ user: createMockUser({ role: 'USER' }) });
 
     renderWithProviders(<CompanySettings />);
 

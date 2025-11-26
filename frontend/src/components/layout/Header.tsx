@@ -17,7 +17,6 @@ const Header: React.FC = () => {
   const coverUrl = resolveAssetUrl(theme.coverPhotoUrl);
   const coverActive = Boolean(coverUrl);
   const useInvertedTone = coverActive || isColorDark(theme.backgroundColor);
-  const textColor = useInvertedTone ? '#f8fafc' : '#0f172a';
   const subtleText = theme.primaryColor;
   const navBackground = useInvertedTone ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.06)';
   const navBorder = useInvertedTone ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(15,23,42,0.12)';
