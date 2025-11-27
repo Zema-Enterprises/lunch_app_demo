@@ -336,9 +336,11 @@ export default function CompanySettings() {
   const resolvedPreviewCoverUrl = resolveAssetUrl(previewCoverUrl);
   const previewUsesInvertedTone = coverActive || isColorDark(themeForm.backgroundColor);
   const previewTextColor = previewUsesInvertedTone ? '#f8fafc' : '#0f172a';
-  const previewSubtleColor = previewUsesInvertedTone ? '#e2e8f0' : themeForm.secondaryColor;
+  const previewCompanyColor = themeForm.primaryColor;
   const previewNavBackground = previewUsesInvertedTone ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.06)';
   const previewNavBorder = previewUsesInvertedTone ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(15,23,42,0.12)';
+  const previewBrandColor = previewUsesInvertedTone ? '#f8fafc' : '#0f172a';
+  const previewSecondaryDark = isColorDark(themeForm.secondaryColor);
 
   return (
     <div className="space-y-6">
@@ -497,13 +499,13 @@ export default function CompanySettings() {
                   <div className="flex items-center gap-3">
                     <span
                       className="text-2xl font-bold"
-                      style={{ color: themeForm.primaryColor }}
+                      style={{ color: previewBrandColor }}
                     >
                       LunchSync
                     </span>
                     <span
                       className="text-sm font-medium hidden sm:inline"
-                      style={{ color: previewSubtleColor }}
+                      style={{ color: previewCompanyColor }}
                     >
                       {company?.name || 'Your Company'}
                     </span>
@@ -523,7 +525,7 @@ export default function CompanySettings() {
                     {user?.role === 'ADMIN' && (
                       <span
                         className="px-2 py-1 text-xs rounded-full"
-                        style={{ background: themeForm.secondaryColor, color: previewUsesInvertedTone ? '#0f172a' : themeForm.primaryColor }}
+                        style={{ background: themeForm.secondaryColor, color: previewSecondaryDark ? '#f8fafc' : '#0f172a' }}
                       >
                         Admin
                       </span>

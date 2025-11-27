@@ -2,12 +2,14 @@ import request from 'supertest';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import app from '../../app';
 import { setupCompanyWithUsers } from '../../test/helpers/auth.helper';
 import { cleanupTestData } from '../../test/helpers/db.helper';
 import { authenticatedRequest } from '../../test/helpers/request.helper';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'storage', 'themes');
+const FALLBACK_UPLOAD_DIR = path.join(os.tmpdir(), 'themes');
 
 const DEFAULT_THEME = {
   primaryColor: '#0f172a',
@@ -34,6 +36,21 @@ const removeUploads = async () => {
     await fs.rm(UPLOAD_DIR, { recursive: true, force: true });
   } catch {
     // ignore
+  }
+  try {
+    await fs.rm(FALLBACK_UPLOAD_DIR, { recursive: true, force: true });
+  } catch {
+    // ignore
+  }
+};
+
+const resolveCompanyDir = async (companyId: string) => {
+  const primary = path.join(UPLOAD_DIR, companyId);
+  try {
+    await fs.access(primary);
+    return primary;
+  } catch {
+    return path.join(FALLBACK_UPLOAD_DIR, companyId);
   }
 };
 
@@ -170,6 +187,37 @@ describe('Company Theme', () => {
 
       expect(clearResponse.body.data.coverPhotoUrl).toBeNull();
       expect(clearResponse.body.data.coverPhotoMeta).toBeNull();
+    });
+
+    it('replaces previous cover and keeps storage to a single file', async () => {
+      const bufferOne = await createImageBuffer(1500, 700, '#112233');
+      const firstUpload = await request(app)
+        .post('/api/admin/theme/cover')
+        .set('Authorization', `Bearer ${company1Admin.token}`)
+        .attach('cover', bufferOne, { filename: 'cover-one.png', contentType: 'image/png' })
+        .expect(200);
+
+      const companyDir = await resolveCompanyDir(company1.company.id);
+      const firstFilename = path.basename(firstUpload.body.data.coverPhotoUrl);
+      const filesAfterFirst = (await fs.readdir(companyDir)).filter((file) => file.endsWith('.webp'));
+
+      expect(filesAfterFirst).toContain(firstFilename);
+
+      const bufferTwo = await createImageBuffer(1600, 800, '#445566');
+      const secondUpload = await request(app)
+        .post('/api/admin/theme/cover')
+        .set('Authorization', `Bearer ${company1Admin.token}`)
+        .attach('cover', bufferTwo, { filename: 'cover-two.png', contentType: 'image/png' })
+        .expect(200);
+
+      const secondFilename = path.basename(secondUpload.body.data.coverPhotoUrl);
+      const filesAfterSecond = (await fs.readdir(companyDir)).filter((file) => file.endsWith('.webp'));
+
+      expect(secondFilename).toContain(company1.company.id);
+      expect(secondFilename).not.toBe(firstFilename);
+      expect(filesAfterSecond).toContain(secondFilename);
+      expect(filesAfterSecond).not.toContain(firstFilename);
+      expect(filesAfterSecond.length).toBe(1);
     });
   });
 });

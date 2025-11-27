@@ -106,6 +106,18 @@ async function ensureUploadDirectory(companyId: string) {
   }
 }
 
+const clearExistingCovers = async (directory: string) => {
+  try {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    const removals = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => fs.rm(path.join(directory, entry.name), { force: true }));
+    await Promise.all(removals);
+  } catch (error) {
+    console.warn('Failed to clear previous cover photos:', (error as Error)?.message);
+  }
+};
+
 const validateCoverFile = async (file?: Express.Multer.File) => {
   if (!file) {
     throw new ThemeError('Cover photo is required');
@@ -149,7 +161,9 @@ export async function updateCoverPhoto(companyId: string, file?: Express.Multer.
     .toBuffer({ resolveWithObject: true });
 
   const directory = await ensureUploadDirectory(companyId);
-  const filename = `cover-${Date.now()}.webp`;
+  await clearExistingCovers(directory);
+
+  const filename = `cover-${companyId}-${Date.now()}.webp`;
   const filepath = path.join(directory, filename);
 
   await fs.writeFile(filepath, data);

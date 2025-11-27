@@ -18,6 +18,8 @@ const Header: React.FC = () => {
   const coverActive = Boolean(coverUrl);
   const useInvertedTone = coverActive || isColorDark(theme.backgroundColor);
   const subtleText = theme.primaryColor;
+  const brandColor = useInvertedTone ? '#f8fafc' : '#0f172a';
+  const isSecondaryDark = isColorDark(theme.secondaryColor);
   const navBackground = useInvertedTone ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.06)';
   const navBorder = useInvertedTone ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(15,23,42,0.12)';
   const hoverBg = useInvertedTone
@@ -52,7 +54,7 @@ const Header: React.FC = () => {
           <MobileNav />
           <h1
             className="text-2xl font-bold"
-            style={{ color: theme.primaryColor }}
+            style={{ color: brandColor }}
           >
             LunchSync
           </h1>
@@ -86,7 +88,7 @@ const Header: React.FC = () => {
                 className="ml-2 px-2 py-1 text-xs rounded-full"
                 style={{
                   background: theme.secondaryColor,
-                  color: useInvertedTone ? '#0f172a' : theme.primaryColor,
+                  color: isSecondaryDark ? '#f8fafc' : '#0f172a',
                 }}
                 role="status"
                 aria-label="Administrator role"
