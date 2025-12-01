@@ -164,38 +164,45 @@ export const handlers = [
     return HttpResponse.json({ data: mockCompany });
   }),
 
-  // Theme
-  http.get(`${API_URL}/theme`, () => {
-    return HttpResponse.json({ data: mockTheme });
-  }),
+// Theme (slug and non-slug)
+http.get(`${API_URL}/theme`, () => HttpResponse.json({ data: mockTheme })),
+http.get(`${API_URL}/c/:slug/theme`, () => HttpResponse.json({ data: mockTheme })),
+http.options(`${API_URL}/theme`, () => new HttpResponse(null, { status: 200 })),
+http.options(`${API_URL}/c/:slug/theme`, () => new HttpResponse(null, { status: 200 })),
 
-  http.options(`${API_URL}/theme`, () => {
-    return new HttpResponse(null, { status: 200 });
-  }),
+http.put(`${API_URL}/admin/theme`, async ({ request }) => {
+  const body = (await request.json()) as any;
+  Object.assign(mockTheme, body);
+  return HttpResponse.json({ data: mockTheme });
+}),
+http.put(`${API_URL}/c/:slug/admin/theme`, async ({ request }) => {
+  const body = (await request.json()) as any;
+  Object.assign(mockTheme, body);
+  return HttpResponse.json({ data: mockTheme });
+}),
+http.options(`${API_URL}/admin/theme`, () => new HttpResponse(null, { status: 200 })),
+http.options(`${API_URL}/c/:slug/admin/theme`, () => new HttpResponse(null, { status: 200 })),
 
-  http.put(`${API_URL}/admin/theme`, async ({ request }) => {
-    const body = (await request.json()) as any;
-    Object.assign(mockTheme, body);
-    return HttpResponse.json({ data: mockTheme });
-  }),
-
-  http.options(`${API_URL}/admin/theme`, () => {
-    return new HttpResponse(null, { status: 200 });
-  }),
-
-  http.post(`${API_URL}/admin/theme/cover`, () => {
-    return HttpResponse.json({
-      data: {
-        ...mockTheme,
-        coverPhotoUrl: 'https://example.com/cover.webp',
-        coverPhotoMeta: { width: 1400, height: 600, format: 'webp', size: 200000 },
-      },
-    });
-  }),
-
-  http.options(`${API_URL}/admin/theme/cover`, () => {
-    return new HttpResponse(null, { status: 200 });
-  }),
+http.post(`${API_URL}/admin/theme/cover`, () =>
+  HttpResponse.json({
+    data: {
+      ...mockTheme,
+      coverPhotoUrl: 'https://example.com/cover.webp',
+      coverPhotoMeta: { width: 1400, height: 600, format: 'webp', size: 200000 },
+    },
+  })
+),
+http.post(`${API_URL}/c/:slug/admin/theme/cover`, () =>
+  HttpResponse.json({
+    data: {
+      ...mockTheme,
+      coverPhotoUrl: 'https://example.com/cover.webp',
+      coverPhotoMeta: { width: 1400, height: 600, format: 'webp', size: 200000 },
+    },
+  })
+),
+http.options(`${API_URL}/admin/theme/cover`, () => new HttpResponse(null, { status: 200 })),
+http.options(`${API_URL}/c/:slug/admin/theme/cover`, () => new HttpResponse(null, { status: 200 })),
 
   // Restaurants
   http.get(`${API_URL}/restaurants`, () => {

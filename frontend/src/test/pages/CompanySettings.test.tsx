@@ -169,7 +169,7 @@ describe('CompanySettings', () => {
       renderWithProviders(<CompanySettings />);
 
       expect(screen.getByText('Company Name')).toBeInTheDocument();
-      expect(screen.getByText(mockCompany.name)).toBeInTheDocument();
+      expect(screen.getAllByText(mockCompany.name)[0]).toBeInTheDocument();
     });
 
     it('should display company domain in view mode', () => {
@@ -684,7 +684,7 @@ describe('CompanySettings', () => {
       renderWithProviders(<CompanySettings />);
 
       expect(screen.getByText('Company Name')).toBeInTheDocument();
-      expect(screen.getByText(mockCompany.name)).toBeInTheDocument();
+      expect(screen.getAllByText(mockCompany.name)[0]).toBeInTheDocument();
       expect(screen.queryByLabelText('Company Name')).not.toBeInTheDocument();
     });
 

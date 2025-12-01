@@ -1,10 +1,12 @@
 import React, { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/layout/Layout';
 import { ToastContainer } from './components/ui/toast';
 import { ErrorBoundary } from './components/error/ErrorBoundary';
 import { ThemeProvider } from './theme/ThemeProvider';
+import { getCurrentTenantSlug } from './lib/api/tenant';
+import { useCompany } from './lib/api/hooks';
 
 // Lazy load pages for better performance
 const Login = lazy(() => import('./pages/Login'));
@@ -61,6 +63,9 @@ function App() {
     loadUser();
   }, [loadUser]);
 
+  const slug = getCurrentTenantSlug();
+  const basePath = slug ? `/c/${slug}` : '';
+
   return (
     <ErrorBoundary>
       <BrowserRouter>
@@ -70,18 +75,21 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
+            <Route path="/c/:slug/invite/:token" element={<AcceptInvite />} />
             
             <Route
               path="/"
               element={
                 <ProtectedRoute>
-                  <ThemeProvider>
-                    <Layout />
-                  </ThemeProvider>
+                  <TenantRedirect>
+                    <ThemeProvider>
+                      <Layout />
+                    </ThemeProvider>
+                  </TenantRedirect>
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<Navigate to={`${basePath || ''}/dashboard`} replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="events" element={<Events />} />
               <Route path="events/:id" element={<EventDetail />} />
@@ -91,7 +99,37 @@ function App() {
               <Route path="orders" element={<Orders />} />
               <Route path="notifications" element={<NotificationList />} />
               <Route path="settings" element={<SettingsLayout />}>
-                <Route index element={<Navigate to="/settings/profile" replace />} />
+                <Route index element={<Navigate to={`${basePath || ''}/settings/profile`} replace />} />
+                <Route path="profile" element={<UserProfile />} />
+                <Route path="company" element={<CompanySettings />} />
+                <Route path="notifications" element={<NotificationSettings />} />
+              </Route>
+            </Route>
+
+            {/* Slug-based tenant shell */}
+            <Route
+              path="/c/:slug/*"
+              element={
+                <TenantScopedShell>
+                  <ProtectedRoute>
+                    <ThemeProvider>
+                      <Layout />
+                    </ThemeProvider>
+                  </ProtectedRoute>
+                </TenantScopedShell>
+              }
+            >
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="events" element={<Events />} />
+              <Route path="events/:id" element={<EventDetail />} />
+              <Route path="restaurants" element={<Restaurants />} />
+              <Route path="restaurants/:id" element={<RestaurantDetails />} />
+              <Route path="restaurants/:id/menu" element={<MenuManagement />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="notifications" element={<NotificationList />} />
+              <Route path="settings" element={<SettingsLayout />}>
+                <Route index element={<Navigate to="profile" replace />} />
                 <Route path="profile" element={<UserProfile />} />
                 <Route path="company" element={<CompanySettings />} />
                 <Route path="notifications" element={<NotificationSettings />} />
@@ -103,5 +141,35 @@ function App() {
     </ErrorBoundary>
   );
 }
+
+const TenantScopedShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { slug } = useParams();
+  useEffect(() => {
+    if (slug) {
+      // cache slug globally if needed later
+    }
+  }, [slug]);
+
+  return <>{children}</>;
+};
+
+const TenantRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { data: company, isLoading } = useCompany();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const slug = getCurrentTenantSlug();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (slug || !company?.slug) return;
+    if (location.pathname.startsWith('/c/')) return;
+
+    const path = location.pathname === '/' ? '/dashboard' : location.pathname;
+    const nextPath = `/c/${company.slug}${path}${location.search}${location.hash}`;
+    navigate(nextPath, { replace: true });
+  }, [slug, company?.slug, location.pathname, location.search, location.hash, navigate, isLoading]);
+
+  return <>{children}</>;
+};
 
 export default App;

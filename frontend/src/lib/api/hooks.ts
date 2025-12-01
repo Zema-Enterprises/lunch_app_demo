@@ -3,6 +3,7 @@ import apiClient from './client';
 import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User, CompanyTheme } from '../../types';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNotificationsRealtimeStore, selectNotificationsRefetchInterval } from '../../store/notificationsRealtimeStore';
+import { buildTenantPath } from './tenant';
 
 // Restaurants
 export const useRestaurants = () => {
@@ -500,7 +501,7 @@ export const useCompanyTheme = () => {
   return useQuery({
     queryKey: ['companyTheme'],
     queryFn: async () => {
-      const response = await apiClient.get<{ data: CompanyTheme }>('/theme');
+      const response = await apiClient.get<{ data: CompanyTheme }>(buildTenantPath('/theme'));
       return response.data.data;
     },
   });
@@ -512,7 +513,7 @@ export const useUpdateCompanyTheme = () => {
 
   return useMutation({
     mutationFn: async (data: Partial<Pick<CompanyTheme, 'primaryColor' | 'secondaryColor' | 'backgroundColor'>> & { useCover?: boolean }) => {
-      const response = await apiClient.put<{ data: CompanyTheme }>('/admin/theme', data);
+      const response = await apiClient.put<{ data: CompanyTheme }>(buildTenantPath('/admin/theme'), data);
       return response.data.data;
     },
     onSuccess: (data) => {
@@ -533,7 +534,7 @@ export const useUploadThemeCover = () => {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('cover', file);
-      const response = await apiClient.post<{ data: CompanyTheme }>('/admin/theme/cover', formData, {
+      const response = await apiClient.post<{ data: CompanyTheme }>(buildTenantPath('/admin/theme/cover'), formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return response.data.data;
@@ -552,7 +553,8 @@ export const useUploadThemeCover = () => {
 export const useRedeemInvite = () => {
   return useMutation({
     mutationFn: async (data: { token: string; name: string; password: string }) => {
-      const response = await apiClient.post<{ data: { token: string; user: User } }>('/auth/invites/redeem', data);
+      const path = buildTenantPath('/auth/invites/redeem');
+      const response = await apiClient.post<{ data: { token: string; user: User } }>(path, data);
       return response.data.data;
     },
   });

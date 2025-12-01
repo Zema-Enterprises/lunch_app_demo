@@ -168,7 +168,10 @@ export default function CompanySettings() {
 
     try {
       const result = await createInviteMutation.mutateAsync(inviteForm);
-      const inviteLink = new URL(`/invite/${result.token}`, window.location.origin).toString();
+      const slugPrefix = window.location.pathname.startsWith('/c/')
+        ? window.location.pathname.split('/').slice(0, 3).join('/')
+        : `/c/${company?.slug || 'invite'}`;
+      const inviteLink = new URL(`${slugPrefix}/invite/${result.token}`, window.location.origin).toString();
       setLastInviteLink(inviteLink);
       await handleInviteCopy(inviteLink);
       setInviteForm({

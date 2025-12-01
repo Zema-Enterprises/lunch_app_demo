@@ -4,6 +4,8 @@
 
 Enable company admins to configure branding (primary/secondary colors, background color, header cover photo) that automatically applies to all users in their company across web clients. Implement via TDD with secure uploads, sensible limits, and visually appealing defaults.
 
+> Status (2025-12-01): Partial delivery. Backend model/endpoints and basic cover upload + frontend theming/admin UI are live, but upload guardrails, signed URLs/CDN toggle, contrast validation, and ops/runbook work remain. See `docs/development/THEME_CUSTOMIZATION_STATUS.md` for the latest audit and follow-ups.
+
 ## Scope & Constraints
 
 - **Actors:** Company admin only (create/update). All authenticated company users consume theme.

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useRedeemInvite } from '@/lib/api/hooks';
 import { useAuthStore } from '@/store/authStore';
+import { getCurrentTenantSlug } from '@/lib/api/tenant';
 
 export default function AcceptInvite() {
   const { token: routeToken } = useParams<{ token: string }>();
@@ -19,6 +20,7 @@ export default function AcceptInvite() {
   const redeemInvite = useRedeemInvite();
   const { setAuthSession } = useAuthStore();
   const inviteToken = routeToken || '';
+  const slug = getCurrentTenantSlug();
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormState((prev) => ({
@@ -137,7 +139,11 @@ export default function AcceptInvite() {
         )}
         {success && (
           <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" type="button" onClick={() => navigate('/dashboard')}>
+            <Button
+              className="w-full"
+              type="button"
+              onClick={() => navigate(slug ? `/c/${slug}/dashboard` : '/dashboard')}
+            >
               Go to Dashboard
             </Button>
             <p className="text-sm text-center text-slate-500">

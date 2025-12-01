@@ -7,6 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 export function renderWithProviders(
   ui: ReactElement,
   {
+    route = '/',
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -19,8 +20,10 @@ export function renderWithProviders(
       },
     }),
     ...renderOptions
-  }: RenderOptions & { queryClient?: QueryClient } = {}
+  }: RenderOptions & { queryClient?: QueryClient; route?: string } = {}
 ) {
+  window.history.pushState({}, 'Test page', route);
+
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
