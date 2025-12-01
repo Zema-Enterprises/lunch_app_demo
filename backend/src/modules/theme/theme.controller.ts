@@ -7,10 +7,13 @@ import {
   updateCoverPhoto,
   updateThemeColors,
 } from './theme.service';
+import { CompanyScopedRequest } from '../../middleware/company';
 
 export const getCompanyTheme = async (req: AuthRequest, res: Response) => {
   try {
-    const theme = await getOrCreateTheme(req.user!.companyId);
+    const scopedReq = req as CompanyScopedRequest;
+    const companyId = scopedReq.companyContext?.id || req.user!.companyId;
+    const theme = await getOrCreateTheme(companyId);
     return res.json({ data: toThemeResponse(theme) });
   } catch (error) {
     console.error('Get theme error:', error);
@@ -20,7 +23,9 @@ export const getCompanyTheme = async (req: AuthRequest, res: Response) => {
 
 export const updateCompanyTheme = async (req: AuthRequest, res: Response) => {
   try {
-    const theme = await updateThemeColors(req.user!.companyId, req.body);
+    const scopedReq = req as CompanyScopedRequest;
+    const companyId = scopedReq.companyContext?.id || req.user!.companyId;
+    const theme = await updateThemeColors(companyId, req.body);
     return res.json({ data: toThemeResponse(theme) });
   } catch (error) {
     console.error('Update theme error:', error);
@@ -30,7 +35,13 @@ export const updateCompanyTheme = async (req: AuthRequest, res: Response) => {
 
 export const uploadThemeCover = async (req: AuthRequest, res: Response) => {
   try {
-    const theme = await updateCoverPhoto(req.user!.companyId, req.file);
+    const scopedReq = req as CompanyScopedRequest;
+    const companyId = scopedReq.companyContext?.id || req.user!.companyId;
+    const companySlug = scopedReq.companyContext?.slug;
+    const theme = await updateCoverPhoto(
+      { id: companyId, slug: companySlug },
+      req.file
+    );
     return res.json({ data: toThemeResponse(theme) });
   } catch (error) {
     if (error instanceof ThemeError) {

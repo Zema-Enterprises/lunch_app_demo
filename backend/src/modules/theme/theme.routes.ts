@@ -4,6 +4,7 @@ import { authMiddleware, adminMiddleware } from '../../middleware/auth';
 import { validate } from '../../middleware/validation';
 import { updateThemeSchema } from './theme.validation';
 import { getCompanyTheme, updateCompanyTheme, uploadThemeCover } from './theme.controller';
+import { resolveCompanyFromSlug } from '../../middleware/company';
 
 const router = Router();
 const upload = multer({
@@ -12,7 +13,6 @@ const upload = multer({
 });
 
 router.get('/theme', authMiddleware, getCompanyTheme);
-
 router.put(
   '/admin/theme',
   authMiddleware,
@@ -20,11 +20,36 @@ router.put(
   validate(updateThemeSchema),
   updateCompanyTheme
 );
-
 router.post(
   '/admin/theme/cover',
   authMiddleware,
   adminMiddleware,
+  upload.single('cover'),
+  uploadThemeCover
+);
+
+// Slug-scoped routes
+router.get(
+  '/c/:slug/theme',
+  authMiddleware,
+  resolveCompanyFromSlug,
+  getCompanyTheme
+);
+
+router.put(
+  '/c/:slug/admin/theme',
+  authMiddleware,
+  adminMiddleware,
+  resolveCompanyFromSlug,
+  validate(updateThemeSchema),
+  updateCompanyTheme
+);
+
+router.post(
+  '/c/:slug/admin/theme/cover',
+  authMiddleware,
+  adminMiddleware,
+  resolveCompanyFromSlug,
   upload.single('cover'),
   uploadThemeCover
 );

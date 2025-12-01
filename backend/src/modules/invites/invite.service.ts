@@ -130,7 +130,10 @@ export const createTenantInvite = async (params: CreateInviteParams) => {
     },
   });
 
-  const inviteLink = `${env.FRONTEND_APP_URL.replace(/\/$/, '')}/invite/${token}`;
+  const baseUrl = env.FRONTEND_APP_URL.replace(/\/$/, '');
+  const inviteLink = company.slug
+    ? `${baseUrl}/c/${company.slug}/invite/${token}`
+    : `${baseUrl}/invite/${token}`;
 
   try {
     await sendInviteEmail({
@@ -161,6 +164,7 @@ interface RedeemInviteParams {
   token: string;
   name: string;
   password: string;
+  companySlug?: string;
 }
 
 export const redeemInviteToken = async (params: RedeemInviteParams) => {
@@ -172,6 +176,17 @@ export const redeemInviteToken = async (params: RedeemInviteParams) => {
 
   if (!invite) {
     throw new InviteServiceError('INVITE_NOT_FOUND', 'Invite not found', 404);
+  }
+
+  if (params.companySlug) {
+    const company = await prisma.company.findUnique({
+      where: { slug: params.companySlug },
+      select: { id: true },
+    });
+
+    if (!company || company.id !== invite.companyId) {
+      throw new InviteServiceError('INVITE_NOT_FOUND', 'Invite not found', 404);
+    }
   }
 
   if (invite.revokedAt) {

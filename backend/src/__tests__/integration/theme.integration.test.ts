@@ -60,14 +60,16 @@ describe('Company Theme', () => {
   let company1User: any;
   let company2: any;
   let company2Admin: any;
+  let company2User: any;
 
   beforeEach(async () => {
     company1 = await setupCompanyWithUsers({ employeeCount: 1 });
     company1Admin = company1.admin;
     company1User = company1.employees[0];
 
-    company2 = await setupCompanyWithUsers({ employeeCount: 0 });
+    company2 = await setupCompanyWithUsers({ employeeCount: 1 });
     company2Admin = company2.admin;
+    company2User = company2.employees[0];
   });
 
   afterEach(async () => {
@@ -218,6 +220,53 @@ describe('Company Theme', () => {
       expect(filesAfterSecond).toContain(secondFilename);
       expect(filesAfterSecond).not.toContain(firstFilename);
       expect(filesAfterSecond.length).toBe(1);
+    });
+  });
+
+  describe('Slug-based routing', () => {
+    it('serves theme for the current tenant slug', async () => {
+      const response = await authenticatedRequest(app, company1Admin.token)
+        .get(`/api/c/${company1.company.slug}/theme`)
+        .expect(200);
+
+      expect(response.body.data).toEqual(DEFAULT_THEME);
+    });
+
+    it('updates theme colors via slug routes and prevents cross-tenant access', async () => {
+      const payload = {
+        primaryColor: '#111111',
+        secondaryColor: '#222222',
+        backgroundColor: '#333333',
+      };
+
+      const updateResponse = await authenticatedRequest(app, company1Admin.token)
+        .put(`/api/c/${company1.company.slug}/admin/theme`)
+        .send(payload)
+        .expect(200);
+
+      expect(updateResponse.body.data.primaryColor).toBe('#111111');
+
+      await authenticatedRequest(app, company2User.token)
+        .get(`/api/c/${company1.company.slug}/theme`)
+        .expect(403);
+    });
+
+    it('uploads cover via slug route and stores under slug-based path', async () => {
+      const buffer = await createImageBuffer(1500, 700, '#445566');
+
+      const response = await request(app)
+        .post(`/api/c/${company1.company.slug}/admin/theme/cover`)
+        .set('Authorization', `Bearer ${company1Admin.token}`)
+        .attach('cover', buffer, { filename: 'cover.png', contentType: 'image/png' })
+        .expect(200);
+
+      expect(response.body.data.coverPhotoUrl).toContain(`/uploads/themes/${company1.company.slug}/`);
+
+      const companyDir = await resolveCompanyDir(company1.company.slug);
+      const files = (await fs.readdir(companyDir)).filter((file) => file.endsWith('.webp'));
+
+      expect(files.length).toBe(1);
+      expect(files[0]).toContain(company1.company.slug);
     });
   });
 });

@@ -6,12 +6,15 @@ import { authenticatedRequest, assertForbidden } from '../../test/helpers/reques
 
 describe('Tenant Invite Flow', () => {
   let companyId: string;
+  let companySlug: string;
   let adminToken: string;
   let userToken: string;
+  let otherCompany: any;
 
   beforeAll(async () => {
     const setup = await setupCompanyWithUsers({ employeeCount: 1 });
     companyId = setup.companyId;
+    companySlug = setup.company.slug;
     adminToken = setup.admin.token;
 
     if (!setup.employees || setup.employees.length === 0) {
@@ -19,10 +22,13 @@ describe('Tenant Invite Flow', () => {
     }
 
     userToken = setup.employees[0].token;
+
+    otherCompany = await setupCompanyWithUsers({ employeeCount: 0 });
   });
 
   afterAll(async () => {
     await cleanupTestData(companyId);
+    await cleanupTestData(otherCompany.companyId);
   });
 
   describe('Invite issuance', () => {
@@ -137,6 +143,41 @@ describe('Tenant Invite Flow', () => {
         legacyRegistrationResponse.body.error ||
         legacyRegistrationResponse.body.message
       ).toMatch(/invite/i);
+    });
+
+    it('redeems invite tokens via slugged route and blocks cross-tenant slugs', async () => {
+      const inviteEmail = `slug.user+${Date.now()}@example.com`;
+
+      const createResponse = await authenticatedRequest(app, adminToken)
+        .post('/api/admin/invites')
+        .send({
+          email: inviteEmail,
+          role: 'USER',
+        })
+        .expect(201);
+
+      const inviteToken = createResponse.body.data.token;
+
+      const redeemResponse = await request(app)
+        .post(`/api/auth/invites/${companySlug}/redeem`)
+        .send({
+          token: inviteToken,
+          password: 'SlugPass123!',
+          name: 'Slug User',
+        })
+        .expect(201);
+
+      expect(redeemResponse.body.data.user.email).toBe(inviteEmail);
+      expect(redeemResponse.body.data.user.companyId).toBe(companyId);
+
+      await request(app)
+        .post(`/api/auth/invites/${otherCompany.company.slug}/redeem`)
+        .send({
+          token: inviteToken,
+          password: 'SlugPass123!',
+          name: 'Slug User',
+        })
+        .expect(404);
     });
   });
 });

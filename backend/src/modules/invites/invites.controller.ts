@@ -12,6 +12,7 @@ import {
   issueRefreshToken,
   setRefreshTokenCookie,
 } from '../auth/refreshToken.service';
+import { CompanyScopedRequest } from '../../middleware/company';
 
 export const createInvite = async (req: AuthRequest, res: Response) => {
   try {
@@ -60,12 +61,15 @@ export const listInvites = async (req: AuthRequest, res: Response) => {
 
 export const redeemInvite = async (req: Request, res: Response) => {
   try {
+    const scopedReq = req as CompanyScopedRequest;
     const { token, password, name } = req.body;
+    const companySlug = scopedReq.companyContext?.slug || scopedReq.params?.slug;
 
     const { user } = await redeemInviteToken({
       token,
       password,
       name,
+      companySlug,
     });
 
     const accessToken = generateToken({

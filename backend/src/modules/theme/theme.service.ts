@@ -93,14 +93,14 @@ export async function updateThemeColors(
   return theme;
 }
 
-async function ensureUploadDirectory(companyId: string) {
-  const directory = path.join(THEME_UPLOAD_ROOT, companyId);
+async function ensureUploadDirectory(tenantKey: string) {
+  const directory = path.join(THEME_UPLOAD_ROOT, tenantKey);
   try {
     await fs.mkdir(directory, { recursive: true });
     return directory;
   } catch (error: any) {
     console.error('Failed to create theme upload directory, falling back to temp:', error?.message);
-    const fallback = path.join(os.tmpdir(), 'themes', companyId);
+    const fallback = path.join(os.tmpdir(), 'themes', tenantKey);
     await fs.mkdir(fallback, { recursive: true });
     return fallback;
   }
@@ -146,7 +146,10 @@ const validateCoverFile = async (file?: Express.Multer.File) => {
   return { width, height };
 };
 
-export async function updateCoverPhoto(companyId: string, file?: Express.Multer.File) {
+export async function updateCoverPhoto(
+  company: { id: string; slug?: string },
+  file?: Express.Multer.File
+) {
   const { width, height } = await validateCoverFile(file);
 
   const { data, info } = await sharp(file!.buffer)
@@ -160,20 +163,21 @@ export async function updateCoverPhoto(companyId: string, file?: Express.Multer.
     .webp({ quality: 82 })
     .toBuffer({ resolveWithObject: true });
 
-  const directory = await ensureUploadDirectory(companyId);
+  const slugOrId = company.slug || company.id;
+  const directory = await ensureUploadDirectory(slugOrId);
   await clearExistingCovers(directory);
 
-  const filename = `cover-${companyId}-${Date.now()}.webp`;
+  const filename = `cover-${slugOrId}-${Date.now()}.webp`;
   const filepath = path.join(directory, filename);
 
   await fs.writeFile(filepath, data);
 
-  const publicUrl = `/uploads/themes/${companyId}/${filename}`;
+  const publicUrl = `/uploads/themes/${slugOrId}/${filename}`;
 
   const theme = await prisma.companyTheme.upsert({
-    where: { companyId },
+    where: { companyId: company.id },
     create: {
-      companyId,
+      companyId: company.id,
       ...DEFAULT_THEME,
       coverPhotoUrl: publicUrl,
       coverPhotoWidth: info.width,
