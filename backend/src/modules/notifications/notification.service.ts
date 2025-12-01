@@ -7,7 +7,7 @@
 
 import prisma from '../../config/database';
 import { broadcastNotificationCreated } from '../../realtime/notifications.dispatcher';
-import { NotificationType, Event, Order, User } from '@prisma/client';
+import { NotificationType, Event, Order, User, Prisma } from '@prisma/client';
 import { dispatchPushNotification } from './push.service';
 
 export interface CreateNotificationOptions {
@@ -304,7 +304,7 @@ export async function createNotificationEvent(
       category: copy.category,
       title: copy.title,
       body: copy.body,
-      meta: copy.meta,
+      meta: copy.meta as Prisma.InputJsonValue | undefined,
       ctaKind: copy.cta?.kind,
       ctaId: copy.cta?.id,
     },
