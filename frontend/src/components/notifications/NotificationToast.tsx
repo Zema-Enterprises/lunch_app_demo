@@ -67,6 +67,8 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
         return '🎉';
       case 'USER_JOINED_EVENT':
         return '👋';
+      case 'USER_LEFT_EVENT':
+        return '🚪';
       case 'EVENT_CLOSED':
         return '🔒';
       case 'EVENT_DELIVERED':
@@ -76,6 +78,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
       case 'EVENT_COMPLETED':
         return '✅';
       case 'REMINDER_SENT':
+      case 'EVENT_CLOSING_SOON':
         return '⏰';
       case 'ORDER_PLACED':
         return '🍽️';
@@ -94,6 +97,8 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
         return 'New Event';
       case 'USER_JOINED_EVENT':
         return 'User Joined';
+      case 'USER_LEFT_EVENT':
+        return 'User Left';
       case 'EVENT_CLOSED':
         return 'Event Closed';
       case 'EVENT_DELIVERED':
@@ -103,6 +108,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
       case 'EVENT_COMPLETED':
         return 'Event Completed';
       case 'REMINDER_SENT':
+      case 'EVENT_CLOSING_SOON':
         return 'Reminder';
       case 'ORDER_PLACED':
         return 'Order Placed';
@@ -133,6 +139,12 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
     }
   };
 
+  const title = notification.title || getNotificationTitle(notification.type);
+  const description =
+    notification.body ||
+    notification.subject?.eventTitle ||
+    notification.event?.title;
+
   return (
     <div
       className={`flex items-start gap-3 p-4 rounded-lg shadow-lg border-2 ${getNotificationStyle(notification.type)} cursor-pointer hover:shadow-xl transition-shadow`}
@@ -149,12 +161,12 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-900 mb-0.5">
-          {getNotificationTitle(notification.type)}
+          {title}
         </p>
         
-        {notification.event && (
+        {description && (
           <p className="text-sm text-slate-700">
-            {notification.event.title}
+            {description}
           </p>
         )}
         

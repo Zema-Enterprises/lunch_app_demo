@@ -74,8 +74,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
     }
 
     // Navigate to the related entity
-    if (notification.eventId) {
+    const cta = notification.cta;
+    if (cta?.kind === 'event' && cta.id) {
+      navigate(`/events/${cta.id}`);
+    } else if (cta?.kind === 'order' && cta.id) {
+      navigate(`/orders/${cta.id}`);
+    } else if (notification.eventId) {
       navigate(`/events/${notification.eventId}`);
+    } else if (notification.orderId) {
+      navigate(`/orders/${notification.orderId}`);
     }
 
     // Close dropdown
@@ -89,6 +96,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
         return '🎉';
       case 'USER_JOINED_EVENT':
         return '👋';
+      case 'USER_LEFT_EVENT':
+        return '🚪';
       case 'EVENT_CLOSED':
         return '🔒';
       case 'EVENT_DELIVERED':
@@ -98,6 +107,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
       case 'EVENT_COMPLETED':
         return '✅';
       case 'REMINDER_SENT':
+      case 'EVENT_CLOSING_SOON':
         return '⏰';
       default:
         return '📢';
@@ -110,6 +120,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
         return 'New Event Created';
       case 'USER_JOINED_EVENT':
         return 'User Joined Event';
+      case 'USER_LEFT_EVENT':
+        return 'User Left Event';
       case 'EVENT_CLOSED':
         return 'Event Closed';
       case 'EVENT_DELIVERED':
@@ -119,6 +131,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
       case 'EVENT_COMPLETED':
         return 'Event Completed';
       case 'REMINDER_SENT':
+      case 'EVENT_CLOSING_SOON':
         return 'Reminder';
       default:
         return 'Notification';
@@ -189,42 +202,58 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
                 </p>
               </div>
             ) : (
-              notifications.map((notification) => (
-                <button
-                  key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                    !notification.read ? 'bg-blue-50' : ''
-                  }`}
-                  role="menuitem"
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Icon */}
-                    <span className="text-2xl flex-shrink-0" aria-hidden="true">
-                      {getNotificationIcon(notification.type)}
-                    </span>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium text-slate-900 leading-tight">
-                          {getNotificationTitle(notification.type)}
-                        </p>
-                        {!notification.read && (
-                          <span 
-                            className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1"
-                            aria-label="Unread"
-                          />
-                        )}
-                      </div>
+              notifications.map((notification) => {
+                const title = notification.title || getNotificationTitle(notification.type);
+                const description =
+                  notification.body ||
+                  notification.subject?.eventTitle ||
+                  notification.event?.title ||
+                  'View details';
+                const relativeTime = formatDistanceToNow(new Date(notification.createdAt), {
+                  addSuffix: true,
+                });
+
+                return (
+                  <button
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                      !notification.read ? 'bg-blue-50' : ''
+                    }`}
+                    role="menuitem"
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Icon */}
+                      <span className="text-2xl flex-shrink-0" aria-hidden="true">
+                        {getNotificationIcon(notification.type)}
+                      </span>
                       
-                      <p className="text-xs text-slate-400 mt-1">
-                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                      </p>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium text-slate-900 leading-tight">
+                            {title}
+                          </p>
+                          {!notification.read && (
+                            <span 
+                              className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1"
+                              aria-label="Unread"
+                            />
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-slate-600 line-clamp-2">
+                          {description}
+                        </p>
+
+                        <p className="text-xs text-slate-400 mt-1">
+                          {relativeTime}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
 

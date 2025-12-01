@@ -27,13 +27,34 @@ const ensureWebPushConfigured = () => {
 const buildNotificationBody = (notification: NotificationEvent) => {
   const defaultTitle = 'New LunchSync notification';
   const defaultBody = `You have a new ${notification.type.replace(/_/g, ' ').toLowerCase()}`;
+  const title = notification.title || defaultTitle;
+  const body = notification.body || defaultBody;
+  const meta = (notification.meta as any) || {};
+  const cta =
+    notification.ctaKind || meta.cta
+      ? {
+          kind: notification.ctaKind ?? meta.cta?.kind,
+          id: notification.ctaId ?? meta.cta?.id,
+        }
+      : undefined;
+
+  const url =
+    cta?.kind === 'event'
+      ? `/events/${cta.id}`
+      : cta?.kind === 'order'
+      ? `/orders/${cta.id}`
+      : notification.eventId
+      ? `/events/${notification.eventId}`
+      : '/notifications';
 
   return JSON.stringify({
-    title: defaultTitle,
-    body: defaultBody,
-    url: notification.eventId ? `/events/${notification.eventId}` : '/notifications',
+    title,
+    body,
+    url,
     notificationId: notification.id,
     type: notification.type,
+    category: notification.category,
+    subject: meta.subject,
   });
 };
 

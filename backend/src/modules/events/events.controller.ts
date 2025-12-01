@@ -188,11 +188,11 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
       select: { id: true },
     });
     
-    await createNotificationEvents(
-      'EVENT_CREATED',
-      companyUsers.map(u => u.id),
-      { eventId: event.id }
-    );
+    await createNotificationEvents('EVENT_CREATED', companyUsers.map(u => u.id), {
+      eventId: event.id,
+      actorId: req.user!.userId,
+      context: { event },
+    });
 
     return res.status(201).json({ data: event });
   } catch (error) {
@@ -281,20 +281,20 @@ export const updateEvent = async (req: AuthRequest, res: Response) => {
 
     // If deliveredAt was set, send EVENT_DELIVERED notification
     if (req.body.deliveredAt !== undefined && updateData.deliveredAt) {
-      await createNotificationEvents(
-        'EVENT_DELIVERED',
-        participantIds,
-        { eventId: event.id }
-      );
+      await createNotificationEvents('EVENT_DELIVERED', participantIds, {
+        eventId: event.id,
+        actorId: req.user!.userId,
+        context: { event },
+      });
     }
 
     // If status was set to COMPLETED, send EVENT_COMPLETED notification
     if (req.body.status === 'COMPLETED' && updateData.status === 'COMPLETED') {
-      await createNotificationEvents(
-        'EVENT_COMPLETED',
-        participantIds,
-        { eventId: event.id }
-      );
+      await createNotificationEvents('EVENT_COMPLETED', participantIds, {
+        eventId: event.id,
+        actorId: req.user!.userId,
+        context: { event },
+      });
     }
 
     return res.json({ data: event });
@@ -396,11 +396,11 @@ export const closeEvent = async (req: AuthRequest, res: Response) => {
 
     // Notify all participants that event is closed
     const participantIds = event.participants.map(p => p.user.id);
-    await createNotificationEvents(
-      'EVENT_CLOSED',
-      participantIds,
-      { eventId: event.id }
-    );
+    await createNotificationEvents('EVENT_CLOSED', participantIds, {
+      eventId: event.id,
+      actorId: req.user!.userId,
+      context: { event },
+    });
 
     return res.json({ data: event });
   } catch (error) {
@@ -418,6 +418,9 @@ export const joinEvent = async (req: AuthRequest, res: Response) => {
       where: {
         id,
         companyId: req.user!.companyId,
+      },
+      include: {
+        restaurant: true,
       },
     });
 
@@ -485,6 +488,8 @@ export const joinEvent = async (req: AuthRequest, res: Response) => {
         type: 'USER_JOINED_EVENT',
         userId: event.createdById,
         eventId: id,
+        actorId: req.user!.userId,
+        context: { event, actor: participant.user },
       });
     }
 
@@ -507,6 +512,9 @@ export const leaveEvent = async (req: AuthRequest, res: Response) => {
       where: {
         id,
         companyId: req.user!.companyId,
+      },
+      include: {
+        restaurant: true,
       },
     });
 
@@ -556,6 +564,8 @@ export const leaveEvent = async (req: AuthRequest, res: Response) => {
       type: 'USER_LEFT_EVENT',
       userId: event.createdById,
       eventId: id,
+      actorId: req.user!.userId,
+      context: { event },
     });
 
     return res.status(200).json({ 
@@ -656,7 +666,11 @@ export const checkCompletion = async (req: AuthRequest, res: Response) => {
 
       // Notify all participants
       const participantIds = event.participants.map(p => p.user.id);
-      await createNotificationEvents('EVENT_COMPLETED', participantIds, { eventId: id });
+      await createNotificationEvents('EVENT_COMPLETED', participantIds, {
+        eventId: id,
+        actorId: req.user!.userId,
+        context: { event },
+      });
 
       return res.json({
         data: {

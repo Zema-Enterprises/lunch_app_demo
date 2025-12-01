@@ -75,10 +75,13 @@ export const notificationTypeSchema = z.enum([
   'EVENT_COMPLETED',
   'EVENT_DELIVERED',
   'USER_JOINED_EVENT',
+  'USER_LEFT_EVENT',
+  'EVENT_CLOSING_SOON',
   'ORDER_PLACED',
   'ORDER_UPDATED',
   'PAYMENT_CONFIRMED',
   'PAYMENT_REMINDER',
+  'REMINDER_SENT',
 ]);
 
 export const notificationEventSchema = z.object({
@@ -91,6 +94,30 @@ export const notificationEventSchema = z.object({
   sentEmail: z.boolean(),
   sentInApp: z.boolean(),
   createdAt: z.string(),
+  category: z.string().optional(),
+  title: z.string().optional(),
+  body: z.string().optional(),
+  actor: z
+    .object({
+      id: z.string(),
+      name: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  subject: z
+    .object({
+      eventId: z.string().optional(),
+      eventTitle: z.string().optional(),
+      restaurantName: z.string().nullable().optional(),
+    })
+    .optional(),
+  cta: z
+    .object({
+      kind: z.string(),
+      id: z.string().optional(),
+    })
+    .optional(),
+  meta: z.record(z.any()).nullable().optional(),
 });
 
 export const userNotificationSettingsSchema = z.object({

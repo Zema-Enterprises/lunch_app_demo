@@ -13,6 +13,9 @@ export const getEventOrders = async (req: AuthRequest, res: Response) => {
         id: eventId,
         companyId: req.user!.companyId,
       },
+      include: {
+        restaurant: true,
+      },
     });
 
     if (!event) {
@@ -192,7 +195,9 @@ export const createOrUpdateOrder = async (req: AuthRequest, res: Response) => {
     if (!existingOrder) {
       const eventCreator = await prisma.event.findUnique({
         where: { id: eventId },
-        select: { createdById: true },
+        include: {
+          restaurant: true,
+        },
       });
 
       if (eventCreator && eventCreator.createdById !== req.user!.userId) {
@@ -201,6 +206,8 @@ export const createOrUpdateOrder = async (req: AuthRequest, res: Response) => {
           userId: eventCreator.createdById,
           eventId,
           orderId: order!.id,
+          actorId: req.user!.userId,
+          context: { event: eventCreator },
         });
       }
     }
@@ -307,6 +314,8 @@ export const confirmPayment = async (req: AuthRequest, res: Response) => {
       userId: order.userId,
       eventId,
       orderId: order.id,
+      actorId: req.user!.userId,
+      context: { event },
     });
 
     return res.json({ data: updated });
@@ -360,4 +369,3 @@ export const getUserOrders = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Failed to fetch orders' });
   }
 };
-

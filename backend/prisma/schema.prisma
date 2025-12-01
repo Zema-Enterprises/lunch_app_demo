@@ -49,6 +49,7 @@ model User {
   orders               Order[]
   participants         EventParticipant[]
   notifications        NotificationEvent[]
+  notificationActions  NotificationEvent[]       @relation("NotificationActor")
   notificationSettings UserNotificationSettings?
   deliveryReceipts     NotificationDeliveryReceipt[]
   pushSubscriptions    PushSubscription[]
@@ -200,20 +201,29 @@ model NotificationEvent {
   id        String           @id @default(cuid())
   type      NotificationType
   userId    String // Recipient
+  actorId   String? // Initiator/actor
   eventId   String? // Related event
   orderId   String? // Related order
   read      Boolean          @default(false)
   sentEmail Boolean          @default(false)
   sentInApp Boolean          @default(false)
+  category  String           @default("general")
+  title     String           @default("")
+  body      String           @default("")
+  meta      Json?
+  ctaKind   String?
+  ctaId     String?
   createdAt DateTime         @default(now())
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor User?  @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
   event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
   order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
   deliveryReceipts NotificationDeliveryReceipt[]
 
   @@index([userId, read])
   @@index([createdAt])
+  @@index([actorId])
 }
 
 model RefreshToken {

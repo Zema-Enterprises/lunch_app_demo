@@ -2,6 +2,42 @@ import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middleware/auth';
 
+const mapNotificationResponse = (notification: any) => {
+  const meta = (notification.meta as any) || {};
+  const subject =
+    meta.subject ||
+    (notification.event
+      ? {
+          eventId: notification.event.id,
+          eventTitle: notification.event.title,
+          restaurantName: notification.event.restaurant?.name,
+        }
+      : undefined);
+
+  const actor =
+    notification.actor || meta.actor
+      ? {
+          id: notification.actor?.id ?? meta.actor?.id,
+          name: notification.actor?.name ?? meta.actor?.name,
+        }
+      : undefined;
+
+  const cta =
+    notification.ctaKind || meta.cta
+      ? {
+          kind: notification.ctaKind ?? meta.cta?.kind,
+          id: notification.ctaId ?? meta.cta?.id,
+        }
+      : undefined;
+
+  return {
+    ...notification,
+    subject,
+    actor,
+    cta,
+  };
+};
+
 /**
  * Get all notifications for the authenticated user
  * Query params: unreadOnly (optional), limit (optional)
@@ -29,6 +65,7 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
           },
         },
         order: true,
+        actor: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -36,10 +73,10 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
       take: limit,
     });
 
-    res.json({ data: notifications });
+    res.json({ data: notifications.map(mapNotificationResponse) });
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    res.status(500).json({ message: 'Failed to fetch notifications' });
   }
 };
 
@@ -72,7 +109,7 @@ export const getNotificationStats = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching notification stats:', error);
-    res.status(500).json({ error: 'Failed to fetch notification stats' });
+    res.status(500).json({ message: 'Failed to fetch notification stats' });
   }
 };
 
@@ -93,7 +130,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
     });
 
     if (!notification) {
-      return res.status(404).json({ error: 'Notification not found' });
+      return res.status(404).json({ message: 'Notification not found' });
     }
 
     await prisma.notificationEvent.update({
@@ -104,7 +141,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
     res.json({ data: { success: true } });
   } catch (error) {
     console.error('Error marking notification as read:', error);
-    res.status(500).json({ error: 'Failed to mark notification as read' });
+    res.status(500).json({ message: 'Failed to mark notification as read' });
   }
 };
 
@@ -128,7 +165,7 @@ export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response
     res.json({ data: { success: true } });
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
-    res.status(500).json({ error: 'Failed to mark all notifications as read' });
+    res.status(500).json({ message: 'Failed to mark all notifications as read' });
   }
 };
 

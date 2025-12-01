@@ -13,6 +13,13 @@ export interface NotificationEventFactoryData {
   read?: boolean;
   sentEmail?: boolean;
   sentInApp?: boolean;
+  actorId?: string;
+  category?: string;
+  title?: string;
+  body?: string;
+  meta?: any;
+  ctaKind?: string;
+  ctaId?: string;
 }
 
 export interface UserNotificationSettingsFactoryData {
@@ -37,9 +44,16 @@ export async function createNotificationEvent(data: NotificationEventFactoryData
       userId: data.userId,
       eventId: data.eventId,
       orderId: data.orderId,
+      actorId: data.actorId,
       read: data.read ?? false,
       sentEmail: data.sentEmail ?? false,
       sentInApp: data.sentInApp ?? false,
+      category: data.category ?? 'general',
+      title: data.title ?? '',
+      body: data.body ?? '',
+      meta: data.meta,
+      ctaKind: data.ctaKind,
+      ctaId: data.ctaId,
     },
     include: {
       user: true,

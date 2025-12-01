@@ -114,6 +114,8 @@ export type NotificationType =
   | 'EVENT_COMPLETED'
   | 'EVENT_DELIVERED'
   | 'USER_JOINED_EVENT'
+  | 'USER_LEFT_EVENT'
+  | 'EVENT_CLOSING_SOON'
   | 'REMINDER_SENT'
   | 'ORDER_PLACED'
   | 'ORDER_UPDATED'
@@ -130,6 +132,13 @@ export interface NotificationEvent {
   sentEmail: boolean;
   sentInApp: boolean;
   createdAt: string;
+   category?: string;
+   title?: string;
+   body?: string;
+   actor?: { id: string; name?: string | null } | null;
+   subject?: { eventId?: string; eventTitle?: string; restaurantName?: string | null };
+   cta?: { kind: string; id?: string };
+   meta?: Record<string, unknown> | null;
   // Populated relations
   event?: Event;
   order?: Order;

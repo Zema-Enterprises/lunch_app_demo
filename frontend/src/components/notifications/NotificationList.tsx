@@ -15,11 +15,13 @@ import { Skeleton } from '../ui/skeleton';
 const ICON_MAP: Record<NotificationEvent['type'] | 'DEFAULT', string> = {
   EVENT_CREATED: '🎉',
   USER_JOINED_EVENT: '👋',
+  USER_LEFT_EVENT: '🚪',
   EVENT_CLOSED: '🔒',
   EVENT_DELIVERED: '🚚',
   PAYMENT_CONFIRMED: '💰',
   EVENT_COMPLETED: '✅',
   REMINDER_SENT: '⏰',
+  EVENT_CLOSING_SOON: '⏰',
   ORDER_PLACED: '🍽️',
   ORDER_UPDATED: '📝',
   PAYMENT_REMINDER: '💳',
@@ -29,11 +31,13 @@ const ICON_MAP: Record<NotificationEvent['type'] | 'DEFAULT', string> = {
 const TITLE_MAP: Record<NotificationEvent['type'] | 'DEFAULT', string> = {
   EVENT_CREATED: 'New Event Created',
   USER_JOINED_EVENT: 'User Joined Event',
+  USER_LEFT_EVENT: 'User Left Event',
   EVENT_CLOSED: 'Event Closed',
   EVENT_DELIVERED: 'Order Delivered',
   PAYMENT_CONFIRMED: 'Payment Confirmed',
   EVENT_COMPLETED: 'Event Completed',
   REMINDER_SENT: 'Reminder',
+  EVENT_CLOSING_SOON: 'Event Closing Soon',
   ORDER_PLACED: 'Order Placed',
   ORDER_UPDATED: 'Order Updated',
   PAYMENT_REMINDER: 'Payment Reminder',
@@ -62,7 +66,24 @@ const NotificationRow: React.FC<NotificationRowProps> = memo(
     );
 
     const icon = useMemo(() => getNotificationIcon(notification.type), [notification.type]);
-    const title = useMemo(() => getNotificationTitle(notification.type), [notification.type]);
+    const title = useMemo(
+      () => notification.title || getNotificationTitle(notification.type),
+      [notification.title, notification.type]
+    );
+    const description = useMemo(() => {
+      if (notification.body) return notification.body;
+      if (notification.subject?.eventTitle) {
+        return notification.subject.restaurantName
+          ? `${notification.subject.eventTitle} • ${notification.subject.restaurantName}`
+          : notification.subject.eventTitle;
+      }
+      if (notification.event?.title) {
+        return notification.event.restaurant
+          ? `${notification.event.title} • ${notification.event.restaurant.name}`
+          : notification.event.title;
+      }
+      return undefined;
+    }, [notification.body, notification.subject, notification.event]);
 
     const handleRowClick = useCallback(() => {
       onOpenNotification(notification);
@@ -98,10 +119,9 @@ const NotificationRow: React.FC<NotificationRowProps> = memo(
               )}
             </div>
 
-            {notification.event && (
+            {description && (
               <p className="text-sm text-slate-600 mb-2">
-                {notification.event.title}
-                {notification.event.restaurant && ` • ${notification.event.restaurant.name}`}
+                {description}
               </p>
             )}
 
@@ -175,7 +195,13 @@ const NotificationList: React.FC<NotificationListProps> = ({ unreadOnly = false 
         markAsReadMutation.mutate(notification.id);
       }
 
-      if (notification.eventId) {
+      const cta = notification.cta;
+
+      if (cta?.kind === 'event' && cta.id) {
+        navigate(`/events/${cta.id}`);
+      } else if (cta?.kind === 'order' && cta.id) {
+        navigate(`/orders/${cta.id}`);
+      } else if (notification.eventId) {
         navigate(`/events/${notification.eventId}`);
       } else if (notification.orderId) {
         navigate(`/orders/${notification.orderId}`);
