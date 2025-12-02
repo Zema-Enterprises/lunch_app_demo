@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Mail, Smartphone, Save } from 'lucide-react';
+import { Bell, Mail, Smartphone } from 'lucide-react';
 import { useNotificationSettings, useUpdateNotificationSettings } from '../../lib/api/hooks';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';

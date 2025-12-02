@@ -181,7 +181,6 @@ export const useNotificationsRealtime = () => {
             body: model.body || model.subject?.eventTitle || 'View details',
             data: { url },
             tag: model.id,
-            renotify: false,
           });
           nativeNotification.onclick = () => {
             window.focus();
