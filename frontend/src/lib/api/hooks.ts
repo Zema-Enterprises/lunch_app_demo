@@ -3,7 +3,7 @@ import apiClient from './client';
 import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User, CompanyTheme } from '../../types';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNotificationsRealtimeStore, selectNotificationsRefetchInterval } from '../../store/notificationsRealtimeStore';
-import { buildTenantPath } from './tenant';
+import { buildTenantPath, getCurrentTenantSlug } from './tenant';
 
 // Restaurants
 export const useRestaurants = () => {
@@ -553,7 +553,8 @@ export const useUploadThemeCover = () => {
 export const useRedeemInvite = () => {
   return useMutation({
     mutationFn: async (data: { token: string; name: string; password: string }) => {
-      const path = buildTenantPath('/auth/invites/redeem');
+      const slug = getCurrentTenantSlug();
+      const path = slug ? `/auth/invites/${slug}/redeem` : '/auth/invites/redeem';
       const response = await apiClient.post<{ data: { token: string; user: User } }>(path, data);
       return response.data.data;
     },
