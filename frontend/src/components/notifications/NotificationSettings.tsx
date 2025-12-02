@@ -91,7 +91,7 @@ const NotificationSettings: React.FC = () => {
   const updateSettings = useUpdateNotificationSettings();
   
   const [localSettings, setLocalSettings] = useState<Partial<UserNotificationSettings>>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [pendingKeys, setPendingKeys] = useState<Set<keyof UserNotificationSettings>>(new Set());
   const [pushStatus, setPushStatus] = useState<'idle' | 'enabled'>('idle');
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const [isProcessingPush, setIsProcessingPush] = useState(false);
@@ -101,30 +101,31 @@ const NotificationSettings: React.FC = () => {
   useEffect(() => {
     if (settings) {
       setLocalSettings(settings);
-      setHasChanges(false);
     }
   }, [settings]);
 
-  const handleToggle = (key: keyof UserNotificationSettings) => {
-    setLocalSettings(prev => ({
+  const handleToggle = async (key: keyof UserNotificationSettings) => {
+    const nextValue = !localSettings[key];
+    const previous = localSettings[key];
+    setLocalSettings((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      [key]: nextValue,
     }));
-    setHasChanges(true);
-  };
+    setPendingKeys((prev) => new Set(prev).add(key));
 
-  const handleSave = () => {
-    updateSettings.mutate(localSettings, {
-      onSuccess: () => {
-        setHasChanges(false);
-      },
-    });
-  };
-
-  const handleReset = () => {
-    if (settings) {
-      setLocalSettings(settings);
-      setHasChanges(false);
+    try {
+      await updateSettings.mutateAsync({ [key]: nextValue } as Partial<UserNotificationSettings>);
+    } catch (error) {
+      setLocalSettings((prev) => ({
+        ...prev,
+        [key]: previous,
+      }));
+    } finally {
+      setPendingKeys((prev) => {
+        const copy = new Set(prev);
+        copy.delete(key);
+        return copy;
+      });
     }
   };
 
@@ -203,35 +204,6 @@ const NotificationSettings: React.FC = () => {
         </p>
       </div>
 
-      {/* Save Button (Sticky) */}
-      {hasChanges && (
-        <div className="sticky top-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-          <p className="text-sm text-blue-800">
-            You have unsaved changes
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              disabled={updateSettings.isPending}
-            >
-              Reset
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSave}
-              disabled={updateSettings.isPending}
-              className="flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save Changes
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="space-y-6">
         {/* Global Settings */}
         <Card className="p-6">
@@ -254,6 +226,7 @@ const NotificationSettings: React.FC = () => {
                   aria-label="Toggle email notifications"
                   checked={localSettings.emailNotifications || false}
                   onChange={() => handleToggle('emailNotifications')}
+                  disabled={pendingKeys.has('emailNotifications')}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -277,6 +250,7 @@ const NotificationSettings: React.FC = () => {
                   aria-label="Toggle in-app notifications"
                   checked={localSettings.inAppNotifications || false}
                   onChange={() => handleToggle('inAppNotifications')}
+                  disabled={pendingKeys.has('inAppNotifications')}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -347,6 +321,7 @@ const NotificationSettings: React.FC = () => {
                     aria-label={`Toggle ${setting.label} notifications`}
                     checked={localSettings[setting.key] || false}
                     onChange={() => handleToggle(setting.key)}
+                    disabled={pendingKeys.has(setting.key)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>

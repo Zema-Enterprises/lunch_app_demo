@@ -12,13 +12,18 @@ const normalizeExpiration = (expiration?: number | null) => {
 };
 
 export const getPushPublicKey = (req: AuthRequest, res: Response) => {
-  const publicKey = process.env.NOTIFICATIONS_VAPID_PUBLIC_KEY || '';
+  try {
+    const publicKey = process.env.NOTIFICATIONS_VAPID_PUBLIC_KEY || '';
 
-  if (!publicKey) {
-    return res.status(503).json({ error: 'Push notifications not configured' });
+    if (!publicKey) {
+      return res.status(503).json({ message: 'Push notifications not configured' });
+    }
+
+    return res.json({ data: { publicKey } });
+  } catch (error) {
+    console.error('Error loading push public key:', error);
+    return res.status(500).json({ message: 'Failed to load push public key' });
   }
-
-  return res.json({ data: { publicKey } });
 };
 
 export const registerPushSubscription = async (req: AuthRequest, res: Response) => {

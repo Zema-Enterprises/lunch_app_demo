@@ -165,6 +165,30 @@ export const useNotificationsRealtime = () => {
           unread: model.read ? stats.unread : stats.unread + 1,
         };
       });
+
+      if (typeof document !== 'undefined' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const shouldShowNative = document.visibilityState === 'hidden' || !document.hasFocus();
+        if (shouldShowNative) {
+          const url =
+            model.cta?.kind === 'event'
+              ? `/events/${model.cta.id}`
+              : model.cta?.kind === 'order'
+              ? `/orders/${model.cta.id}`
+              : model.eventId
+              ? `/events/${model.eventId}`
+              : '/notifications';
+          const nativeNotification = new Notification(model.title || model.type, {
+            body: model.body || model.subject?.eventTitle || 'View details',
+            data: { url },
+            tag: model.id,
+            renotify: false,
+          });
+          nativeNotification.onclick = () => {
+            window.focus();
+            window.location.assign(url);
+          };
+        }
+      }
     };
 
     const client = createNotificationsSocket({

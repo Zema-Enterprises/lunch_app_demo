@@ -201,7 +201,7 @@ export async function getUserNotificationSettings(userId: string) {
     settings = await prisma.userNotificationSettings.create({
       data: {
         userId,
-        emailEnabled: true,
+        emailEnabled: false,
         inAppEnabled: true,
         notifyOnEventCreated: true, // Users should know about new events
         notifyOnOrderPlaced: true,
@@ -225,8 +225,8 @@ export async function shouldNotifyUser(
 ): Promise<boolean> {
   const settings = await getUserNotificationSettings(userId);
 
-  // If both channels disabled, don't notify
-  if (!settings.emailEnabled && !settings.inAppEnabled) {
+  // If in-app is disabled, stop creating in-app notifications (email channel would be separate)
+  if (!settings.inAppEnabled) {
     return false;
   }
 

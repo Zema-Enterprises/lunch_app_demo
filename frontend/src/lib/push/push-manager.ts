@@ -1,8 +1,9 @@
 import { useAuthStore } from '@/store/authStore';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const SERVICE_WORKER_PATH = '/service-worker.js';
-const PUBLIC_KEY_ENDPOINT = '/api/notifications/push/public-key';
-const SUBSCRIPTIONS_ENDPOINT = '/api/notifications/push-subscriptions';
+const PUBLIC_KEY_ENDPOINT = `${API_BASE_URL}/notifications/push/public-key`;
+const SUBSCRIPTIONS_ENDPOINT = `${API_BASE_URL}/notifications/push-subscriptions`;
 export const isPushFeatureEnabled = () =>
   import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED !== 'false';
 

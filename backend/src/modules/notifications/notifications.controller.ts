@@ -185,9 +185,9 @@ export const getNotificationSettings = async (req: AuthRequest, res: Response) =
       settings = await prisma.userNotificationSettings.create({
         data: {
           userId,
-          emailEnabled: true,
+          emailEnabled: false,
           inAppEnabled: true,
-          notifyOnEventCreated: false,
+          notifyOnEventCreated: true,
           notifyOnOrderPlaced: true,
           notifyOnDeadlineApproaching: true,
           notifyOnEventClosed: true,
@@ -197,10 +197,16 @@ export const getNotificationSettings = async (req: AuthRequest, res: Response) =
       });
     }
 
-    res.json({ data: settings });
+    res.json({
+      data: {
+        ...settings,
+        emailNotifications: settings.emailEnabled,
+        inAppNotifications: settings.inAppEnabled,
+      },
+    });
   } catch (error) {
     console.error('Error fetching notification settings:', error);
-    res.status(500).json({ error: 'Failed to fetch notification settings' });
+    res.status(500).json({ message: 'Failed to fetch notification settings' });
   }
 };
 
@@ -212,24 +218,41 @@ export const updateNotificationSettings = async (req: AuthRequest, res: Response
     const userId = req.user!.userId;
     const updates = req.body as any;
 
-    // Remove protected fields from updates
-    delete updates.userId;
-    delete updates.id;
-    delete updates.createdAt;
-    delete updates.updatedAt;
+    const normalized: any = {
+      emailEnabled: updates.emailEnabled ?? updates.emailNotifications,
+      inAppEnabled: updates.inAppEnabled ?? updates.inAppNotifications,
+      notifyOnEventCreated: updates.notifyOnEventCreated,
+      notifyOnOrderPlaced: updates.notifyOnOrderPlaced,
+      notifyOnDeadlineApproaching: updates.notifyOnDeadlineApproaching,
+      notifyOnEventClosed: updates.notifyOnEventClosed,
+      notifyOnPaymentConfirmed: updates.notifyOnPaymentConfirmed,
+      notifyOnEventCompleted: updates.notifyOnEventCompleted,
+    };
+
+    Object.keys(normalized).forEach((key) => {
+      if (normalized[key] === undefined) {
+        delete normalized[key];
+      }
+    });
 
     const settings = await prisma.userNotificationSettings.upsert({
       where: { userId },
-      update: updates,
+      update: normalized,
       create: {
         userId,
-        ...updates,
+        ...normalized,
       },
     });
 
-    res.json({ data: settings });
+    res.json({
+      data: {
+        ...settings,
+        emailNotifications: settings.emailEnabled,
+        inAppNotifications: settings.inAppEnabled,
+      },
+    });
   } catch (error) {
     console.error('Error updating notification settings:', error);
-    res.status(500).json({ error: 'Failed to update notification settings' });
+    res.status(500).json({ message: 'Failed to update notification settings' });
   }
 };

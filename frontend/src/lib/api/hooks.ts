@@ -781,7 +781,12 @@ export const useNotificationSettings = () => {
     queryKey: ['notifications', 'settings'],
     queryFn: async () => {
       const response = await apiClient.get<{ data: UserNotificationSettings }>('/notifications/settings');
-      return response.data.data;
+      const data = response.data.data as any;
+      return {
+        ...data,
+        emailNotifications: data.emailNotifications ?? data.emailEnabled,
+        inAppNotifications: data.inAppNotifications ?? data.inAppEnabled,
+      };
     },
   });
 };
@@ -796,7 +801,12 @@ export const useUpdateNotificationSettings = () => {
         '/notifications/settings',
         settings
       );
-      return response.data.data;
+      const data = response.data.data as any;
+      return {
+        ...data,
+        emailNotifications: data.emailNotifications ?? data.emailEnabled,
+        inAppNotifications: data.inAppNotifications ?? data.inAppEnabled,
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'settings'] });
