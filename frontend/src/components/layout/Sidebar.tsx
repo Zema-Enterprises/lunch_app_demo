@@ -3,17 +3,18 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Calendar, UtensilsCrossed, ShoppingCart, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useThemeContext } from '@/theme/ThemeProvider';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const DEFAULT_HEADER_HEIGHT = 64; // 4rem fallback
 
 const Sidebar: React.FC = () => {
   const { theme } = useThemeContext();
   const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/events', icon: Calendar, label: 'Events' },
-    { to: '/restaurants', icon: UtensilsCrossed, label: 'Restaurants' },
-    { to: '/orders', icon: ShoppingCart, label: 'Orders' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: buildTenantPath('/dashboard'), icon: LayoutDashboard, label: 'Dashboard' },
+    { to: buildTenantPath('/events'), icon: Calendar, label: 'Events' },
+    { to: buildTenantPath('/restaurants'), icon: UtensilsCrossed, label: 'Restaurants' },
+    { to: buildTenantPath('/orders'), icon: ShoppingCart, label: 'Orders' },
+    { to: buildTenantPath('/settings'), icon: Settings, label: 'Settings' },
   ];
 
   const [stickyOffset, setStickyOffset] = React.useState(DEFAULT_HEADER_HEIGHT);
