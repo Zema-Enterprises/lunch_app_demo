@@ -16,8 +16,11 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('Header Component', () => {
+  const mockOnMobileMenuToggle = vi.fn();
+
   beforeEach(() => {
     mockNavigate.mockClear();
+    mockOnMobileMenuToggle.mockClear();
     // Reset auth store to default authenticated state
     useAuthStore.setState({
       user: {
@@ -41,7 +44,7 @@ describe('Header Component', () => {
 
   describe('Rendering & Structure', () => {
     it('should render header with LunchSync branding', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       expect(screen.getByRole('banner')).toBeInTheDocument();
       // Use getByText instead since MobileNav may have other headings
@@ -49,13 +52,13 @@ describe('Header Component', () => {
     });
 
     it('should display authenticated user name', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       expect(screen.getByText('Test User')).toBeInTheDocument();
     });
 
     it('should display company name when available', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const companyElement = screen.getByText('Test Company');
       expect(companyElement).toBeInTheDocument();
@@ -63,14 +66,14 @@ describe('Header Component', () => {
     });
 
     it('should render logout button', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const logoutButton = screen.getByRole('button', { name: /log out/i });
       expect(logoutButton).toBeInTheDocument();
     });
 
     it('should have proper navigation landmark', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const userMenu = screen.getByRole('navigation', { name: /user menu/i });
       expect(userMenu).toBeInTheDocument();
@@ -89,7 +92,7 @@ describe('Header Component', () => {
         },
       });
 
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const adminBadge = screen.getByRole('status', { name: /administrator role/i });
       expect(adminBadge).toBeInTheDocument();
@@ -107,14 +110,14 @@ describe('Header Component', () => {
         },
       });
 
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       expect(screen.queryByRole('status', { name: /administrator role/i })).not.toBeInTheDocument();
       expect(screen.queryByText('Admin')).not.toBeInTheDocument();
     });
 
     it('should display user icon', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       // Check for user information container
       const userInfo = screen.getByLabelText(/user information/i);
@@ -126,7 +129,7 @@ describe('Header Component', () => {
         company: null,
       });
 
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       // Should still render header without company name
       expect(screen.getAllByText('LunchSync')[0]).toBeInTheDocument();
@@ -143,7 +146,7 @@ describe('Header Component', () => {
         logout: mockLogout,
       });
 
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const logoutButton = screen.getByRole('button', { name: /log out/i });
       await user.click(logoutButton);
@@ -153,7 +156,7 @@ describe('Header Component', () => {
     });
 
     it('should have accessible logout button with aria-label', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const logoutButton = screen.getByRole('button', { name: /log out of your account/i });
       expect(logoutButton).toBeInTheDocument();
@@ -161,7 +164,7 @@ describe('Header Component', () => {
     });
 
     it('should show logout icon', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const logoutButton = screen.getByRole('button', { name: /log out/i });
       // Icon has aria-hidden, so we check button exists
@@ -171,21 +174,21 @@ describe('Header Component', () => {
 
   describe('Accessibility', () => {
     it('should have proper banner role for header', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const header = screen.getByRole('banner');
       expect(header).toHaveAttribute('data-layout-header');
     });
 
     it('should have aria-label for user menu navigation', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const nav = screen.getByRole('navigation', { name: /user menu/i });
       expect(nav).toHaveAttribute('aria-label', 'User menu');
     });
 
     it('should have aria-hidden on decorative icons', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       // Icons should have aria-hidden (tested implicitly - they don't appear in accessible tree)
       const userInfo = screen.getByLabelText(/user information/i);
@@ -193,7 +196,7 @@ describe('Header Component', () => {
     });
 
     it('should have semantic heading for app name', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       // Just verify LunchSync text is present
       expect(screen.getAllByText('LunchSync')[0]).toBeInTheDocument();
@@ -202,7 +205,7 @@ describe('Header Component', () => {
 
   describe('Responsive Behavior', () => {
     it('should render with responsive classes', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       const header = screen.getByRole('banner');
       expect(header).toHaveClass('border-b');
@@ -210,7 +213,7 @@ describe('Header Component', () => {
     });
 
     it('should have mobile navigation component', () => {
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       // MobileNav component should be present
       const header = screen.getByRole('banner');
@@ -236,7 +239,7 @@ describe('Header Component', () => {
         },
       });
 
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
 
       // Check all elements are present
       expect(screen.getAllByText('LunchSync')[0]).toBeInTheDocument();
@@ -254,7 +257,7 @@ describe('Header Component', () => {
         companyId: 'company-1',
       };
 
-      render(<Header />);
+      render(<Header onMobileMenuToggle={mockOnMobileMenuToggle} />);
       useAuthStore.setState({ user: regularUser });
 
       // Layout should still be consistent
