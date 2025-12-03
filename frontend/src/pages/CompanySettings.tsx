@@ -499,19 +499,65 @@ export default function CompanySettings() {
                   }}
                 />
                 <div className="relative flex items-center gap-3 w-full justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 md:gap-4">
                     <span
                       className="text-2xl font-bold"
-                      style={{ color: previewBrandColor }}
+                      style={{ 
+                        color: previewBrandColor,
+                        textShadow: previewUsesInvertedTone 
+                          ? '0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)' 
+                          : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      }}
                     >
                       LunchSync
                     </span>
-                    <span
-                      className="text-sm font-medium hidden sm:inline"
-                      style={{ color: previewCompanyColor }}
+                    {/* Visual separator */}
+                    <div 
+                      className="hidden sm:block w-px h-6"
+                      style={{
+                        backgroundColor: previewUsesInvertedTone 
+                          ? 'rgba(255, 255, 255, 0.3)' 
+                          : 'rgba(15, 23, 42, 0.2)',
+                      }}
+                      aria-hidden="true"
+                    />
+                    {/* Company name badge */}
+                    <div
+                      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full"
+                      style={{
+                        backgroundColor: previewUsesInvertedTone 
+                          ? 'rgba(255, 255, 255, 0.15)' 
+                          : 'rgba(15, 23, 42, 0.06)',
+                        backdropFilter: 'blur(8px)',
+                        border: `1px solid ${previewUsesInvertedTone 
+                          ? 'rgba(255, 255, 255, 0.25)' 
+                          : 'rgba(15, 23, 42, 0.12)'}`,
+                        boxShadow: previewUsesInvertedTone
+                          ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                          : '0 1px 3px rgba(0, 0, 0, 0.08)',
+                      }}
                     >
-                      {company?.name || 'Your Company'}
-                    </span>
+                      <span
+                        className="text-xs font-medium uppercase tracking-wider"
+                        style={{ 
+                          color: previewUsesInvertedTone ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.6)',
+                          textShadow: previewUsesInvertedTone ? '0 1px 2px rgba(0, 0, 0, 0.2)' : 'none',
+                        }}
+                      >
+                        Company
+                      </span>
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ 
+                          color: previewCompanyColor,
+                          textShadow: previewUsesInvertedTone 
+                            ? '0 1px 3px rgba(0, 0, 0, 0.25)' 
+                            : '0 1px 2px rgba(0, 0, 0, 0.08)',
+                        }}
+                      >
+                        {company?.name || 'Your Company'}
+                      </span>
+                    </div>
                   </div>
                   <div
                     className="flex items-center gap-3 px-4 py-2 rounded-full"

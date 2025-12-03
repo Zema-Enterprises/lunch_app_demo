@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import MobileNav from './MobileNav';
 import { SkipLink } from '../accessibility/SkipLink';
 import { useNotificationsRealtime } from '@/lib/realtime/useNotificationsRealtime';
 import OfflineBanner from './OfflineBanner';
@@ -14,6 +15,7 @@ const Layout: React.FC = () => {
   useNotificationsRealtime();
   const { isAuthenticated } = useAuthStore();
   const { addToast } = useNotificationStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const promptKey = 'notifications:pushPromptShown';
@@ -43,7 +45,8 @@ const Layout: React.FC = () => {
     <div className="min-h-screen bg-[#f8fafc]" data-testid="layout-shell">
       <SkipLink />
       <OfflineBanner />
-      <Header />
+      <MobileNav isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
+      <Header onMobileMenuToggle={() => setIsMobileMenuOpen(true)} />
       <div className="flex">
         <Sidebar />
         <main 

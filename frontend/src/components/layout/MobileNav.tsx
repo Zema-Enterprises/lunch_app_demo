@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Calendar, UtensilsCrossed, ShoppingCart, Settings, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Calendar, UtensilsCrossed, ShoppingCart, Settings, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-const MobileNav: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface MobileNavProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}
 
+const MobileNav: React.FC<MobileNavProps> = ({ isOpen, setIsOpen }) => {
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/events', icon: Calendar, label: 'Events' },
@@ -21,25 +24,13 @@ const MobileNav: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setIsOpen(true)}
-        className="lg:hidden"
-        aria-label="Open navigation menu"
-        aria-expanded={isOpen}
-        aria-controls="mobile-menu"
-      >
-        <Menu className="w-6 h-6" aria-hidden="true" />
-      </Button>
-
-      {/* Backdrop */}
+      {/* Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
+          style={{ touchAction: 'none' }}
         />
       )}
 
@@ -47,12 +38,16 @@ const MobileNav: React.FC = () => {
       <nav
         id="mobile-menu"
         className={cn(
-          'fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 lg:hidden',
+          'fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden overflow-y-auto',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        style={{
+          backgroundColor: '#ffffff',
+          opacity: 1,
+        }}
         aria-label="Mobile navigation"
       >
-        <div className="p-4">
+        <div className="p-4 bg-white">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-900">LunchSync</h2>
             <Button

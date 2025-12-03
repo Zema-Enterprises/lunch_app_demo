@@ -2,14 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '../ui/button';
-import { User, LogOut } from 'lucide-react';
-import MobileNav from './MobileNav';
+import { User, LogOut, Menu } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 import { useThemeContext } from '@/theme/ThemeProvider';
 import { useCompany } from '@/lib/api/hooks';
 import { isColorDark, resolveAssetUrl } from '@/theme/utils';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onMobileMenuToggle: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const { user, company, logout } = useAuthStore();
   const { data: companyData } = useCompany();
   const navigate = useNavigate();
@@ -50,22 +53,79 @@ const Header: React.FC = () => {
       }}
     >
       <div className="px-4 md:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <MobileNav />
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMobileMenuToggle}
+            className="lg:hidden"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-6 h-6" aria-hidden="true" />
+          </Button>
           <h1
             className="text-2xl font-bold"
-            style={{ color: brandColor }}
+            style={{ 
+              color: brandColor,
+              textShadow: useInvertedTone 
+                ? '0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)' 
+                : '0 1px 3px rgba(0, 0, 0, 0.1)',
+            }}
           >
             LunchSync
           </h1>
           {(companyData || company) && (
-            <span
-              className="text-sm font-medium hidden sm:inline"
-              aria-label={`Company: ${companyData?.name ?? company?.name ?? 'Company'}`}
-              style={{ color: subtleText }}
-            >
-              {companyData?.name ?? company?.name}
-            </span>
+            <>
+              {/* Visual separator */}
+              <div 
+                className="hidden sm:block w-px h-6"
+                style={{
+                  backgroundColor: useInvertedTone 
+                    ? 'rgba(255, 255, 255, 0.3)' 
+                    : 'rgba(15, 23, 42, 0.2)',
+                }}
+                aria-hidden="true"
+              />
+              {/* Company name badge */}
+              <div
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full"
+                style={{
+                  backgroundColor: useInvertedTone 
+                    ? 'rgba(255, 255, 255, 0.15)' 
+                    : 'rgba(15, 23, 42, 0.06)',
+                  backdropFilter: 'blur(8px)',
+                  border: `1px solid ${useInvertedTone 
+                    ? 'rgba(255, 255, 255, 0.25)' 
+                    : 'rgba(15, 23, 42, 0.12)'}`,
+                  boxShadow: useInvertedTone
+                    ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.08)',
+                }}
+              >
+                <span
+                  className="text-xs font-medium uppercase tracking-wider"
+                  style={{ 
+                    color: useInvertedTone ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.6)',
+                    textShadow: useInvertedTone ? '0 1px 2px rgba(0, 0, 0, 0.2)' : 'none',
+                  }}
+                >
+                  Company
+                </span>
+                <span
+                  className="text-sm font-semibold"
+                  aria-label={`Company: ${companyData?.name ?? company?.name ?? 'Company'}`}
+                  style={{ 
+                    color: subtleText,
+                    textShadow: useInvertedTone 
+                      ? '0 1px 3px rgba(0, 0, 0, 0.25)' 
+                      : '0 1px 2px rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  {companyData?.name ?? company?.name}
+                </span>
+              </div>
+            </>
           )}
         </div>
         
