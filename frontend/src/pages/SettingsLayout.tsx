@@ -1,12 +1,15 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { User, Building, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useThemeContext } from '@/theme/ThemeProvider';
 
 export default function SettingsLayout() {
   const location = useLocation();
-  const isProfileActive = location.pathname === '/settings' || location.pathname === '/settings/profile';
-  const isCompanyActive = location.pathname === '/settings/company';
-  const isNotificationsActive = location.pathname === '/settings/notifications';
+  const { theme } = useThemeContext();
+
+  const isProfileActive = location.pathname.endsWith('/settings') || location.pathname.endsWith('/settings/profile');
+  const isCompanyActive = location.pathname.endsWith('/settings/company');
+  const isNotificationsActive = location.pathname.endsWith('/settings/notifications');
 
   return (
     <div className="space-y-6">
@@ -23,9 +26,10 @@ export default function SettingsLayout() {
             className={cn(
               'flex items-center gap-2 px-4 py-2 border-b-2 font-medium transition-colors',
               isProfileActive
-                ? 'border-primary text-primary'
+                ? ''
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             )}
+            style={isProfileActive ? { borderBottomColor: theme.primaryColor, color: theme.primaryColor } : undefined}
           >
             <User className="h-4 w-4" />
             Profile
@@ -35,9 +39,10 @@ export default function SettingsLayout() {
             className={cn(
               'flex items-center gap-2 px-4 py-2 border-b-2 font-medium transition-colors',
               isCompanyActive
-                ? 'border-primary text-primary'
+                ? ''
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             )}
+            style={isCompanyActive ? { borderBottomColor: theme.primaryColor, color: theme.primaryColor } : undefined}
           >
             <Building className="h-4 w-4" />
             Company
@@ -47,9 +52,10 @@ export default function SettingsLayout() {
             className={cn(
               'flex items-center gap-2 px-4 py-2 border-b-2 font-medium transition-colors',
               isNotificationsActive
-                ? 'border-primary text-primary'
+                ? ''
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             )}
+            style={isNotificationsActive ? { borderBottomColor: theme.primaryColor, color: theme.primaryColor } : undefined}
           >
             <Bell className="h-4 w-4" />
             Notifications
