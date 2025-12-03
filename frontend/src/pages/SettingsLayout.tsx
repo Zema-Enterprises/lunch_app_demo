@@ -23,7 +23,7 @@ export default function SettingsLayout() {
             className={cn(
               'flex items-center gap-2 px-4 py-2 border-b-2 font-medium transition-colors',
               isProfileActive
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             )}
           >
@@ -35,7 +35,7 @@ export default function SettingsLayout() {
             className={cn(
               'flex items-center gap-2 px-4 py-2 border-b-2 font-medium transition-colors',
               isCompanyActive
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             )}
           >
@@ -47,7 +47,7 @@ export default function SettingsLayout() {
             className={cn(
               'flex items-center gap-2 px-4 py-2 border-b-2 font-medium transition-colors',
               isNotificationsActive
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             )}
           >
