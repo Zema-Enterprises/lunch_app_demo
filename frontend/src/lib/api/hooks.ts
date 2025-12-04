@@ -225,8 +225,9 @@ export const useUpdateEvent = () => {
       const response = await apiClient.patch<{ data: Event }>(`/events/${eventId}`, data);
       return response.data.data;  // Unwrap { data: ... }
     },
-    onSuccess: () => {
+    onSuccess: (_, { eventId }) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       addToast({ type: 'success', message: 'Event updated successfully!' });
     },
     onError: () => {
@@ -243,8 +244,9 @@ export const useDeleteEvent = () => {
     mutationFn: async (eventId: string) => {
       await apiClient.delete(`/events/${eventId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       addToast({ type: 'success', message: 'Event deleted successfully!' });
     },
     onError: () => {
@@ -261,8 +263,9 @@ export const useLeaveEvent = () => {
     mutationFn: async (eventId: string) => {
       await apiClient.post(`/events/${eventId}/leave`);
     },
-    onSuccess: () => {
+    onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       addToast({ type: 'success', message: 'Left event successfully!' });
     },
     onError: () => {
@@ -280,8 +283,9 @@ export const useJoinEvent = () => {
       const response = await apiClient.post<{ data: any }>(`/events/${eventId}/join`);
       return response.data.data;  // Unwrap { data: ... }
     },
-    onSuccess: () => {
+    onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       addToast({ type: 'success', message: 'Joined event successfully!' });
     },
     onError: () => {
@@ -299,8 +303,9 @@ export const useCloseEvent = () => {
       const response = await apiClient.post<{ data: Event }>(`/events/${eventId}/close`);
       return response.data.data;  // Unwrap { data: ... }
     },
-    onSuccess: () => {
+    onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       addToast({ type: 'success', message: 'Event closed successfully!' });
     },
     onError: () => {
