@@ -10,6 +10,7 @@ import {
 } from './notifications.controller';
 import {
   getPushPublicKey,
+  getPushSubscriptions,
   registerPushSubscription,
   deletePushSubscription,
 } from './push.controller';
@@ -26,6 +27,7 @@ router.get('/stats', getNotificationStats);
 router.patch('/:id/read', markNotificationAsRead);
 router.post('/mark-all-read', markAllNotificationsAsRead);
 router.get('/push/public-key', getPushPublicKey);
+router.get('/push-subscriptions', getPushSubscriptions);
 router.post('/push-subscriptions', registerPushSubscription);
 router.delete('/push-subscriptions', deletePushSubscription);
 router.get('/analytics/summary', getNotificationAnalyticsSummary);

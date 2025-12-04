@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Mail, Smartphone } from 'lucide-react';
-import { useNotificationSettings, useUpdateNotificationSettings } from '../../lib/api/hooks';
+import { useNotificationSettings, useUpdateNotificationSettings, useUserPushSubscriptions } from '../../lib/api/hooks';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { Card } from '../ui/card';
-import { registerForPushNotifications, unsubscribeFromPushNotifications, isPushFeatureEnabled, getSubscriptionStatus } from '@/lib/push/push-manager';
+import { registerForPushNotifications, unsubscribeFromPushNotifications, isPushFeatureEnabled } from '@/lib/push/push-manager';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * NotificationSettings Component
@@ -89,13 +90,17 @@ const NOTIFICATION_SETTINGS: NotificationSetting[] = [
 const NotificationSettings: React.FC = () => {
   const { data: settings, isLoading } = useNotificationSettings();
   const updateSettings = useUpdateNotificationSettings();
+  const { data: pushSubscriptions } = useUserPushSubscriptions();
+  const queryClient = useQueryClient();
   
   const [localSettings, setLocalSettings] = useState<Partial<UserNotificationSettings>>({});
   const [pendingKeys, setPendingKeys] = useState<Set<keyof UserNotificationSettings>>(new Set());
-  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled'>('idle');
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const [isProcessingPush, setIsProcessingPush] = useState(false);
   const pushFeatureEnabled = isPushFeatureEnabled();
+
+  // Per-user push status from backend
+  const pushStatus = pushSubscriptions?.hasActiveSubscription ? 'enabled' : 'idle';
 
   // Initialize local settings when data is loaded
   useEffect(() => {
@@ -103,24 +108,6 @@ const NotificationSettings: React.FC = () => {
       setLocalSettings(settings);
     }
   }, [settings]);
-
-  // Check push subscription status on mount
-  useEffect(() => {
-    const checkPushStatus = async () => {
-      if (!pushFeatureEnabled) return;
-      try {
-        const status = await getSubscriptionStatus();
-        if (status === 'enabled') {
-          setPushStatus('enabled');
-        } else {
-          setPushStatus('idle');
-        }
-      } catch {
-        setPushStatus('idle');
-      }
-    };
-    checkPushStatus();
-  }, [pushFeatureEnabled]);
 
   const handleToggle = async (key: keyof UserNotificationSettings) => {
     const nextValue = !localSettings[key];
@@ -152,22 +139,24 @@ const NotificationSettings: React.FC = () => {
       setPushMessage('Push notifications are currently unavailable.');
       return;
     }
-    if (!pushFeatureEnabled) {
-      setPushMessage('Push notifications are currently unavailable.');
-      return;
-    }
     setIsProcessingPush(true);
     setPushMessage(null);
     try {
       const subscription = await registerForPushNotifications();
       if (subscription) {
-        setPushStatus('enabled');
+        // Refetch user's subscriptions to update status
+        await queryClient.invalidateQueries({ queryKey: ['push-subscriptions'] });
         setPushMessage('Push notifications enabled.');
       } else {
         setPushMessage('Push notifications permission was not granted.');
       }
     } catch (error) {
-      setPushMessage('Failed to enable push notifications. Please try again.');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      if (message.includes('production build')) {
+        setPushMessage('Push notifications require a production build. Run "npm run build" and serve the dist folder.');
+      } else {
+        setPushMessage('Failed to enable push notifications. Please try again.');
+      }
     } finally {
       setIsProcessingPush(false);
     }
@@ -179,7 +168,8 @@ const NotificationSettings: React.FC = () => {
     try {
       const result = await unsubscribeFromPushNotifications();
       if (result) {
-        setPushStatus('idle');
+        // Refetch user's subscriptions to update status
+        await queryClient.invalidateQueries({ queryKey: ['push-subscriptions'] });
         setPushMessage('Push notifications disabled.');
       }
     } catch (error) {

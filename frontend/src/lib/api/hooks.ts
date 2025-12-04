@@ -823,3 +823,22 @@ export const useUpdateNotificationSettings = () => {
     },
   });
 };
+
+// Push Subscriptions (per-user tracking)
+export const useUserPushSubscriptions = () => {
+  return useQuery({
+    queryKey: ['push-subscriptions'],
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        data: {
+          subscriptions: Array<{ id: string; endpoint: string; userAgent?: string }>;
+          count: number;
+          hasActiveSubscription: boolean;
+        };
+      }>('/notifications/push-subscriptions');
+      return response.data.data;
+    },
+    staleTime: 30_000, // Cache for 30 seconds
+  });
+};
+

@@ -26,6 +26,30 @@ export const getPushPublicKey = (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getPushSubscriptions = async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const subscriptions = await prisma.pushSubscription.findMany({
+      where: { userId: req.user.userId },
+      select: { id: true, endpoint: true, userAgent: true, createdAt: true },
+    });
+
+    return res.json({
+      data: {
+        subscriptions,
+        count: subscriptions.length,
+        hasActiveSubscription: subscriptions.length > 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching push subscriptions:', error);
+    return res.status(500).json({ message: 'Failed to fetch push subscriptions' });
+  }
+};
+
 export const registerPushSubscription = async (req: AuthRequest, res: Response) => {
   const { endpoint, keys, expirationTime, userAgent } = req.body ?? {};
 
