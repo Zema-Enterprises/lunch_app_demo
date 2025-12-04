@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { registerSchema, RegisterFormData, PASSWORD_REQUIREMENTS_HINT } from '../lib/validation/schemas';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Register: React.FC = () => {
         companyDomain: data.companyDomain,
         companySlug: data.companySlug,
       });
-      navigate('/dashboard');
+      navigate(buildTenantPath('/dashboard'));
     } catch (err: any) {
       setError('root', { message: err.response?.data?.message || 'Registration failed' });
     }

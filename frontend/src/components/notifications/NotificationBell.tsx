@@ -6,6 +6,7 @@ import { NotificationEvent } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../ui/button';
 import { useNotificationQueueStore } from '@/store/notificationQueueStore';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 /**
  * NotificationBell Component
@@ -76,13 +77,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
     // Navigate to the related entity
     const cta = notification.cta;
     if (cta?.kind === 'event' && cta.id) {
-      navigate(`/events/${cta.id}`);
+      navigate(buildTenantPath(`/events/${cta.id}`));
     } else if (cta?.kind === 'order' && cta.id) {
-      navigate(`/orders/${cta.id}`);
+      navigate(buildTenantPath(`/orders/${cta.id}`));
     } else if (notification.eventId) {
-      navigate(`/events/${notification.eventId}`);
+      navigate(buildTenantPath(`/events/${notification.eventId}`));
     } else if (notification.orderId) {
-      navigate(`/orders/${notification.orderId}`);
+      navigate(buildTenantPath(`/orders/${notification.orderId}`));
     }
 
     // Close dropdown
@@ -264,7 +265,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  navigate('/notifications');
+                  navigate(buildTenantPath('/notifications'));
                   setIsOpen(false);
                 }}
                 className="w-full justify-center text-blue-600 hover:text-blue-700 hover:bg-blue-50"

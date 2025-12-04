@@ -8,6 +8,7 @@ import { ArrowLeft, Clock, MapPin, Users, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Event, User as UserType } from '../types';
 import OrdersSection from '../components/events/OrdersSection';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 interface UserEventState {
   isParticipant: boolean;
@@ -104,7 +105,7 @@ const EventDetail = () => {
         <p className="text-gray-600 mb-4">
           The event you're looking for doesn't exist or you don't have access to it.
         </p>
-        <Button onClick={() => navigate('/events')}>
+        <Button onClick={() => navigate(buildTenantPath('/events'))}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Events
         </Button>
@@ -132,7 +133,7 @@ const EventDetail = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/events')}>
+          <Button variant="outline" onClick={() => navigate(buildTenantPath('/events'))}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

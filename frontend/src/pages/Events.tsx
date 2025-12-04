@@ -11,6 +11,7 @@ import { CreateEventDialog } from '../components/features/CreateEventDialog';
 import { OrderModal } from '../components/features/OrderModal';
 import { EditEventDialog } from '../components/events/EditEventDialog';
 import { EventDetailsModal } from '../components/events/EventDetailsModal';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const Events = () => {
   const { user } = useAuthStore();
@@ -68,7 +69,7 @@ const Events = () => {
       return;
     }
 
-    navigate('/events', {
+    navigate(buildTenantPath('/events'), {
       replace: true,
       state: { ...location.state, openCreateEvent: false },
     });

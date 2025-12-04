@@ -10,6 +10,7 @@ import { SkeletonStats, SkeletonList } from '../components/loading/SkeletonLoade
 import { EmptyState } from '../components/ui/empty-state';
 import NotificationAnalyticsPanel from '@/components/notifications/NotificationAnalyticsPanel';
 import { useAuthStore } from '../store/authStore';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const Dashboard: React.FC = () => {
         <h1 className="text-3xl font-bold">Dashboard</h1>
         {user?.role === 'ADMIN' && (
           <Button
-            onClick={() => navigate('/events', { state: { openCreateEvent: true } })}
+            onClick={() => navigate(buildTenantPath('/events'), { state: { openCreateEvent: true } })}
             className="flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -57,7 +58,7 @@ const Dashboard: React.FC = () => {
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/events')}
+              onClick={() => navigate(buildTenantPath('/events'))}
             >
               <ShoppingBag className="w-6 h-6" />
               <div>
@@ -68,7 +69,7 @@ const Dashboard: React.FC = () => {
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/orders')}
+              onClick={() => navigate(buildTenantPath('/orders'))}
             >
               <Users className="w-6 h-6" />
               <div>
@@ -79,7 +80,7 @@ const Dashboard: React.FC = () => {
             <Button 
               variant="outline" 
               className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/restaurants')}
+              onClick={() => navigate(buildTenantPath('/restaurants'))}
             >
               <UtensilsCrossed className="w-6 h-6" />
               <div>
@@ -176,7 +177,7 @@ const Dashboard: React.FC = () => {
                   <CardTitle>Upcoming Events</CardTitle>
                   <CardDescription>Active lunch events you can join</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/events')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate(buildTenantPath('/events'))}>
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -191,7 +192,7 @@ const Dashboard: React.FC = () => {
                   description="Create your first event to get started organizing lunch orders"
                   action={{
                     label: 'Create Event',
-                    onClick: () => navigate('/events', { state: { openCreateEvent: true } }),
+                    onClick: () => navigate(buildTenantPath('/events'), { state: { openCreateEvent: true } }),
                   }}
                 />
               ) : (
@@ -200,7 +201,7 @@ const Dashboard: React.FC = () => {
                     <div
                       key={event.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-all hover:shadow-sm animate-scale-in"
-                      onClick={() => navigate('/events')}
+                      onClick={() => navigate(buildTenantPath('/events'))}
                     >
                       <div className="flex-1">
                         <h3 className="font-medium">{event.title}</h3>
@@ -233,7 +234,7 @@ const Dashboard: React.FC = () => {
                   <CardTitle>Recent Orders</CardTitle>
                   <CardDescription>Your latest orders</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/orders')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate(buildTenantPath('/orders'))}>
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -246,7 +247,7 @@ const Dashboard: React.FC = () => {
                   icon={ShoppingBag}
                   title="No orders yet"
                   description="Place your first lunch order to see it here."
-                  action={{ label: 'Browse Events', onClick: () => navigate('/events') }}
+                  action={{ label: 'Browse Events', onClick: () => navigate(buildTenantPath('/events')) }}
                 />
               ) : (
                 <div className="space-y-4">

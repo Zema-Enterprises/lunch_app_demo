@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { loginSchema, LoginFormData } from '../lib/validation/schemas';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const Login: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data.email, data.password);
-      navigate('/dashboard');
+      navigate(buildTenantPath('/dashboard'));
     } catch (err: any) {
       setError('root', { message: err.response?.data?.message || 'Login failed' });
     }

@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, MapPin, Utensils, DollarSign, Package } from 'lucide-
 import { useAuthStore } from '../store/authStore';
 import { EditRestaurantDialog } from '../components/restaurants/EditRestaurantDialog';
 import { MenuItem } from '../types';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const RestaurantDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +31,7 @@ const RestaurantDetails = () => {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Restaurant not found</h1>
-        <Button onClick={() => navigate('/restaurants')}>
+        <Button onClick={() => navigate(buildTenantPath('/restaurants'))}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Restaurants
         </Button>
@@ -43,7 +44,7 @@ const RestaurantDetails = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/restaurants')}>
+          <Button variant="outline" onClick={() => navigate(buildTenantPath('/restaurants'))}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

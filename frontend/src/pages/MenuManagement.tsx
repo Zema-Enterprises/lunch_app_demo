@@ -9,6 +9,7 @@ import { ArrowLeft, Trash2, DollarSign, Search } from 'lucide-react';
 import { AddMenuItemDialog } from '../components/menu/AddMenuItemDialog';
 import { EditMenuItemDialog } from '../components/menu/EditMenuItemDialog';
 import { MenuItem } from '../types';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const MenuManagement = () => {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +54,7 @@ const MenuManagement = () => {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Restaurant not found</h1>
-        <Button onClick={() => navigate('/restaurants')}>
+        <Button onClick={() => navigate(buildTenantPath('/restaurants'))}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Restaurants
         </Button>
