@@ -4,7 +4,7 @@ import { useNotificationSettings, useUpdateNotificationSettings } from '../../li
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { Card } from '../ui/card';
-import { registerForPushNotifications, unsubscribeFromPushNotifications, isPushFeatureEnabled } from '@/lib/push/push-manager';
+import { registerForPushNotifications, unsubscribeFromPushNotifications, isPushFeatureEnabled, getSubscriptionStatus } from '@/lib/push/push-manager';
 
 /**
  * NotificationSettings Component
@@ -103,6 +103,24 @@ const NotificationSettings: React.FC = () => {
       setLocalSettings(settings);
     }
   }, [settings]);
+
+  // Check push subscription status on mount
+  useEffect(() => {
+    const checkPushStatus = async () => {
+      if (!pushFeatureEnabled) return;
+      try {
+        const status = await getSubscriptionStatus();
+        if (status === 'enabled') {
+          setPushStatus('enabled');
+        } else {
+          setPushStatus('idle');
+        }
+      } catch {
+        setPushStatus('idle');
+      }
+    };
+    checkPushStatus();
+  }, [pushFeatureEnabled]);
 
   const handleToggle = async (key: keyof UserNotificationSettings) => {
     const nextValue = !localSettings[key];

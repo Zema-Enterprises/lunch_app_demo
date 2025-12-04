@@ -147,3 +147,33 @@ export const unsubscribeFromPushNotifications = async () => {
   await existing.unsubscribe();
   return true;
 };
+
+export const getSubscriptionStatus = async (): Promise<'enabled' | 'denied' | 'default'> => {
+  if (!isFeatureEnabled()) {
+    return 'default';
+  }
+  
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return 'default';
+  }
+
+  // Check browser permission state
+  if (typeof Notification !== 'undefined') {
+    if (Notification.permission === 'denied') {
+      return 'denied';
+    }
+  }
+
+  // Check for active subscription
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      return 'enabled';
+    }
+  } catch {
+    // Service worker not ready or other error
+  }
+
+  return 'default';
+};

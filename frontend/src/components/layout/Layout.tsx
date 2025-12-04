@@ -7,39 +7,72 @@ import { SkipLink } from '../accessibility/SkipLink';
 import { useNotificationsRealtime } from '@/lib/realtime/useNotificationsRealtime';
 import OfflineBanner from './OfflineBanner';
 import { useEffect } from 'react';
-import { registerForPushNotifications, isPushFeatureEnabled } from '@/lib/push/push-manager';
+import { registerForPushNotifications, isPushFeatureEnabled, getSubscriptionStatus } from '@/lib/push/push-manager';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import PushPermissionModal from '@/components/notifications/PushPermissionModal';
 
 const Layout: React.FC = () => {
   useNotificationsRealtime();
   const { isAuthenticated } = useAuthStore();
   const { addToast } = useNotificationStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showPushModal, setShowPushModal] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(false);
 
   useEffect(() => {
     const promptKey = 'notifications:pushPromptShown';
-    const shouldPrompt = isAuthenticated && isPushFeatureEnabled() && !localStorage.getItem(promptKey);
-    if (!shouldPrompt) return;
 
-    const ask = async () => {
-      const consent = window.confirm('Enable push notifications to get alerts even when the app is closed?');
-      localStorage.setItem(promptKey, 'true');
-      if (!consent) return;
-      try {
-        const subscription = await registerForPushNotifications();
-        if (subscription) {
-          addToast({ type: 'success', message: 'Push notifications enabled' });
-        } else {
-          addToast({ type: 'error', message: 'Push permission was not granted' });
-        }
-      } catch (error) {
-        addToast({ type: 'error', message: 'Failed to enable push notifications' });
+    const checkAndPrompt = async () => {
+      // Don't show if not authenticated, feature disabled, or already shown
+      if (!isAuthenticated || !isPushFeatureEnabled() || localStorage.getItem(promptKey)) {
+        return;
       }
+
+      // Check if push is already enabled
+      try {
+        const status = await getSubscriptionStatus();
+        if (status === 'enabled' || status === 'denied') {
+          localStorage.setItem(promptKey, 'true');
+          return;
+        }
+      } catch {
+        // Continue to show modal if check fails
+      }
+
+      // Small delay for better UX - let the page settle
+      setTimeout(() => {
+        setShowPushModal(true);
+      }, 1500);
     };
 
-    void ask();
-  }, [isAuthenticated, addToast]);
+    checkAndPrompt();
+  }, [isAuthenticated]);
+
+  const handleEnablePush = async () => {
+    setIsPushLoading(true);
+    localStorage.setItem('notifications:pushPromptShown', 'true');
+
+    try {
+      const subscription = await registerForPushNotifications();
+      setShowPushModal(false);
+      if (subscription) {
+        addToast({ type: 'success', message: 'Push notifications enabled!' });
+      } else {
+        addToast({ type: 'error', message: 'Push permission was not granted. You can enable it later in Settings.' });
+      }
+    } catch (error) {
+      setShowPushModal(false);
+      addToast({ type: 'error', message: 'Failed to enable push notifications. Please try again in Settings.' });
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
+
+  const handleDismissPush = () => {
+    localStorage.setItem('notifications:pushPromptShown', 'true');
+    setShowPushModal(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc]" data-testid="layout-shell">
@@ -58,8 +91,17 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Push Permission Modal */}
+      <PushPermissionModal
+        isOpen={showPushModal}
+        onEnable={handleEnablePush}
+        onDismiss={handleDismissPush}
+        isLoading={isPushLoading}
+      />
     </div>
   );
 };
 
 export default Layout;
+
