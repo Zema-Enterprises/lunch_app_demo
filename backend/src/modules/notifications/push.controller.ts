@@ -28,7 +28,7 @@ export const getPushPublicKey = (req: AuthRequest, res: Response) => {
 
 export const getPushSubscriptions = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 
   try {
@@ -54,11 +54,11 @@ export const registerPushSubscription = async (req: AuthRequest, res: Response) 
   const { endpoint, keys, expirationTime, userAgent } = req.body ?? {};
 
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
-    return res.status(400).json({ error: 'Invalid subscription payload' });
+    return res.status(400).json({ message: 'Invalid subscription payload' });
   }
 
   if (!req.user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 
   const subscription = await prisma.pushSubscription.upsert({
@@ -94,11 +94,11 @@ export const deletePushSubscription = async (req: AuthRequest, res: Response) =>
   const { endpoint } = req.body ?? {};
 
   if (!endpoint) {
-    return res.status(400).json({ error: 'Endpoint is required' });
+    return res.status(400).json({ message: 'Endpoint is required' });
   }
 
   if (!req.user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 
   await prisma.pushSubscription.deleteMany({
