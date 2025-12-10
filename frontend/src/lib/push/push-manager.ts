@@ -4,10 +4,34 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const SERVICE_WORKER_PATH = '/service-worker.js';
 const PUBLIC_KEY_ENDPOINT = `${API_BASE_URL}/notifications/push/public-key`;
 const SUBSCRIPTIONS_ENDPOINT = `${API_BASE_URL}/notifications/push-subscriptions`;
+const FETCH_TIMEOUT_MS = 10000; // 10 second timeout for API calls
+
 export const isPushFeatureEnabled = () =>
   import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED !== 'false';
 
 const isFeatureEnabled = () => isPushFeatureEnabled();
+
+/**
+ * Creates a fetch request with timeout support
+ */
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = FETCH_TIMEOUT_MS
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 type PushPermissionResult = 'granted' | 'denied' | 'default';
 
@@ -65,7 +89,7 @@ const buildAuthHeaders = () => {
 };
 
 const fetchVapidPublicKey = async () => {
-  const response = await fetch(PUBLIC_KEY_ENDPOINT, {
+  const response = await fetchWithTimeout(PUBLIC_KEY_ENDPOINT, {
     method: 'GET',
     headers: buildAuthHeaders(),
   });
@@ -129,7 +153,8 @@ export const registerForPushNotifications = async (): Promise<SerializedPushSubs
 
   const payload = subscription.toJSON() as SerializedPushSubscription;
 
-  await fetch(SUBSCRIPTIONS_ENDPOINT, {
+  // Register subscription with backend
+  const response = await fetchWithTimeout(SUBSCRIPTIONS_ENDPOINT, {
     method: 'POST',
     headers: buildAuthHeaders(),
     body: JSON.stringify({
@@ -139,6 +164,14 @@ export const registerForPushNotifications = async (): Promise<SerializedPushSubs
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
     }),
   });
+
+  if (!response.ok) {
+    // Server registration failed - unsubscribe from browser to stay in sync
+    await subscription.unsubscribe();
+    const errorBody = await response.json().catch(() => ({}));
+    const errorMessage = errorBody?.message || errorBody?.error || 'Failed to register push subscription';
+    throw new Error(errorMessage);
+  }
 
   return payload;
 };
@@ -154,13 +187,31 @@ export const unsubscribeFromPushNotifications = async () => {
     return false;
   }
 
-  await fetch(SUBSCRIPTIONS_ENDPOINT, {
-    method: 'DELETE',
-    headers: buildAuthHeaders(),
-    body: JSON.stringify({ endpoint: existing.endpoint }),
-  });
+  const endpoint = existing.endpoint;
 
-  await existing.unsubscribe();
+  // Unsubscribe from browser FIRST to prevent receiving more push messages
+  const browserUnsubscribed = await existing.unsubscribe();
+  if (!browserUnsubscribed) {
+    throw new Error('Failed to unsubscribe from browser push');
+  }
+
+  // Then remove from server (best effort - browser is already unsubscribed)
+  try {
+    const response = await fetchWithTimeout(SUBSCRIPTIONS_ENDPOINT, {
+      method: 'DELETE',
+      headers: buildAuthHeaders(),
+      body: JSON.stringify({ endpoint }),
+    });
+
+    if (!response.ok && response.status !== 404) {
+      // Log but don't throw - browser is already unsubscribed
+      console.warn('Failed to remove push subscription from server:', response.status);
+    }
+  } catch (error) {
+    // Log but don't throw - browser is already unsubscribed
+    console.warn('Error removing push subscription from server:', error);
+  }
+
   return true;
 };
 
