@@ -90,17 +90,67 @@ const NOTIFICATION_SETTINGS: NotificationSetting[] = [
 const NotificationSettings: React.FC = () => {
   const { data: settings, isLoading } = useNotificationSettings();
   const updateSettings = useUpdateNotificationSettings();
-  const { data: pushSubscriptions } = useUserPushSubscriptions();
+  const { data: pushSubscriptions, isError: pushQueryError, failureReason } = useUserPushSubscriptions();
   const queryClient = useQueryClient();
-  
+
   const [localSettings, setLocalSettings] = useState<Partial<UserNotificationSettings>>({});
   const [pendingKeys, setPendingKeys] = useState<Set<keyof UserNotificationSettings>>(new Set());
-  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const [pushMessage, setPushMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isProcessingPush, setIsProcessingPush] = useState(false);
+  const [browserPushStatus, setBrowserPushStatus] = useState<'idle' | 'enabled' | null>(null);
   const pushFeatureEnabled = isPushFeatureEnabled();
 
-  // Per-user push status from backend
-  const pushStatus = pushSubscriptions?.hasActiveSubscription ? 'enabled' : 'idle';
+  // Auto-clear success/info messages after 5 seconds
+  useEffect(() => {
+    if (pushMessage && pushMessage.type !== 'error') {
+      const timer = setTimeout(() => setPushMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [pushMessage]);
+
+  // Determine if we should use browser fallback (only for network/server errors, not auth errors)
+  const isNetworkOrServerError = pushQueryError && (
+    !failureReason ||
+    (failureReason instanceof Error &&
+      !('response' in failureReason && (failureReason as any).response?.status === 401))
+  );
+
+  // Fallback: Check browser subscription if backend query fails with network/server error
+  useEffect(() => {
+    if (!pushFeatureEnabled || !isNetworkOrServerError) {
+      setBrowserPushStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkBrowserSubscription = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (!cancelled) {
+            setBrowserPushStatus(subscription ? 'enabled' : 'idle');
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setBrowserPushStatus('idle');
+        }
+      }
+    };
+
+    checkBrowserSubscription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pushFeatureEnabled, isNetworkOrServerError]);
+
+  // Per-user push status: backend data > browser fallback > idle
+  const pushStatus: 'idle' | 'enabled' = pushSubscriptions?.hasActiveSubscription
+    ? 'enabled'
+    : (browserPushStatus ?? 'idle');
 
   // Initialize local settings when data is loaded
   useEffect(() => {
@@ -136,7 +186,7 @@ const NotificationSettings: React.FC = () => {
 
   const handleEnablePush = async () => {
     if (!pushFeatureEnabled) {
-      setPushMessage('Push notifications are currently unavailable.');
+      setPushMessage({ text: 'Push notifications are currently unavailable.', type: 'error' });
       return;
     }
     setIsProcessingPush(true);
@@ -146,16 +196,22 @@ const NotificationSettings: React.FC = () => {
       if (subscription) {
         // Refetch user's subscriptions to update status
         await queryClient.invalidateQueries({ queryKey: ['push-subscriptions'] });
-        setPushMessage('Push notifications enabled.');
+        setPushMessage({ text: 'Push notifications enabled successfully.', type: 'success' });
       } else {
-        setPushMessage('Push notifications permission was not granted.');
+        setPushMessage({ text: 'Push notifications permission was not granted.', type: 'info' });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      if (message.includes('production build')) {
-        setPushMessage('Push notifications require a production build. Run "npm run build" and serve the dist folder.');
+      if (message.includes('production build') || message.includes('Service worker')) {
+        setPushMessage({
+          text: 'Push notifications require a production build. Run "npm run build" and serve the dist folder.',
+          type: 'error'
+        });
+      } else if (message.includes('timeout') || message.includes('aborted')) {
+        setPushMessage({ text: 'Request timed out. Please check your connection and try again.', type: 'error' });
       } else {
-        setPushMessage('Failed to enable push notifications. Please try again.');
+        // Show the actual error message from the backend
+        setPushMessage({ text: message, type: 'error' });
       }
     } finally {
       setIsProcessingPush(false);
@@ -170,10 +226,13 @@ const NotificationSettings: React.FC = () => {
       if (result) {
         // Refetch user's subscriptions to update status
         await queryClient.invalidateQueries({ queryKey: ['push-subscriptions'] });
-        setPushMessage('Push notifications disabled.');
+        setPushMessage({ text: 'Push notifications disabled.', type: 'success' });
+      } else {
+        setPushMessage({ text: 'No active push subscription found.', type: 'info' });
       }
     } catch (error) {
-      setPushMessage('Failed to disable push notifications. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to disable push notifications';
+      setPushMessage({ text: message, type: 'error' });
     } finally {
       setIsProcessingPush(false);
     }
@@ -285,19 +344,29 @@ const NotificationSettings: React.FC = () => {
                   onClick={pushStatus === 'enabled' ? handleDisablePush : handleEnablePush}
                   disabled={isProcessingPush || !pushFeatureEnabled}
                 >
-                  {pushFeatureEnabled
-                    ? pushStatus === 'enabled'
-                      ? 'Disable Push Notifications'
-                      : 'Enable Push Notifications'
-                    : 'Push Not Available'}
+                  {isProcessingPush
+                    ? 'Processing...'
+                    : pushFeatureEnabled
+                      ? pushStatus === 'enabled'
+                        ? 'Disable Push Notifications'
+                        : 'Enable Push Notifications'
+                      : 'Push Not Available'}
                 </Button>
-                {pushFeatureEnabled && pushStatus === 'enabled' && (
+                {pushFeatureEnabled && pushStatus === 'enabled' && !pushMessage && (
                   <p className="text-xs text-slate-500 text-right max-w-xs">
                     Push notifications are active on this device.
                   </p>
                 )}
                 {pushMessage && (
-                  <p className="text-xs text-slate-500 text-right max-w-xs">{pushMessage}</p>
+                  <p className={`text-xs text-right max-w-xs ${
+                    pushMessage.type === 'error'
+                      ? 'text-red-600'
+                      : pushMessage.type === 'success'
+                        ? 'text-green-600'
+                        : 'text-slate-500'
+                  }`}>
+                    {pushMessage.text}
+                  </p>
                 )}
               </div>
             </div>
