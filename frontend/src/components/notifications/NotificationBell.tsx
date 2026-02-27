@@ -152,19 +152,21 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell Icon Button */}
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-full transition-colors ${toneButtonClass}`}
+        className={`relative rounded-full ${toneButtonClass}`}
         aria-label={`Notifications${totalUnreadCount > 0 ? ` (${totalUnreadCount} unread)` : ''}`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <Bell className="w-5 h-5" aria-hidden="true" />
-        
+
         {/* Badge with unread count */}
         {totalUnreadCount > 0 && (
-          <span 
+          <span
             className={`absolute top-1 right-1 flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full ${toneBadgeClass}`}
             aria-live="polite"
             aria-atomic="true"
@@ -172,7 +174,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
             {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
           </span>
         )}
-      </button>
+      </Button>
 
       {/* Dropdown Menu */}
       {isOpen && (
@@ -215,10 +217,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
                 });
 
                 return (
-                  <button
+                  <Button
                     key={notification.id}
+                    variant="ghost"
                     onClick={() => handleNotificationClick(notification)}
-                    className={`w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                    className={`w-full h-auto px-4 py-3 text-left justify-start hover:bg-slate-50 transition-colors border-b border-gray-100 last:border-b-0 rounded-none ${
                       !notification.read ? 'bg-blue-50' : ''
                     }`}
                     role="menuitem"
@@ -228,7 +231,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
                       <span className="text-2xl flex-shrink-0" aria-hidden="true">
                         {getNotificationIcon(notification.type)}
                       </span>
-                      
+
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -236,13 +239,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
                             {title}
                           </p>
                           {!notification.read && (
-                            <span 
+                            <span
                               className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1"
                               aria-label="Unread"
                             />
                           )}
                         </div>
-                        
+
                         <p className="text-sm text-slate-600 line-clamp-2">
                           {description}
                         </p>
@@ -252,7 +255,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ tone = 'default' })
                         </p>
                       </div>
                     </div>
-                  </button>
+                  </Button>
                 );
               })
             )}

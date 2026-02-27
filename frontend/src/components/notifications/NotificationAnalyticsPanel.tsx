@@ -3,6 +3,7 @@ import { useNotificationAnalytics } from '@/lib/api/hooks';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, BarChart3, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 const channelLabelMap: Record<string, string> = {
@@ -88,28 +89,32 @@ export const NotificationAnalyticsPanel: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-700">Delivery Breakdown</h3>
             <div className="flex flex-wrap gap-2">
-              <button
-                className={`text-xs px-3 py-1 rounded-full border transition ${
+              <Button
+                variant="outline"
+                size="sm"
+                className={`text-xs px-3 py-1 rounded-full ${
                   selectedChannel === 'ALL'
-                    ? 'bg-slate-900 text-white border-slate-900'
+                    ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 hover:text-white'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                 }`}
                 onClick={() => setSelectedChannel('ALL')}
               >
                 All Channels
-              </button>
+              </Button>
               {Object.keys(data.delivery).map((channel) => (
-                <button
+                <Button
                   key={channel}
-                  className={`text-xs px-3 py-1 rounded-full border transition ${
+                  variant="outline"
+                  size="sm"
+                  className={`text-xs px-3 py-1 rounded-full ${
                     selectedChannel === channel
-                      ? 'bg-slate-900 text-white border-slate-900'
+                      ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800 hover:text-white'
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                   }`}
                   onClick={() => setSelectedChannel(channel)}
                 >
                   {channelLabelMap[channel] ?? channel}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

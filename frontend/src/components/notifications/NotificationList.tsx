@@ -67,11 +67,12 @@ const NotificationRow: React.FC<NotificationRowProps> = memo(
 
     const icon = useMemo(() => getNotificationIcon(notification.type), [notification.type]);
     const title = useMemo(
-      () => notification.title || getNotificationTitle(notification.type),
-      [notification.title, notification.type]
+      () => getNotificationTitle(notification.type),
+      [notification.type]
     );
     const description = useMemo(() => {
       if (notification.body) return notification.body;
+      if (notification.title) return notification.title;
       if (notification.subject?.eventTitle) {
         return notification.subject.restaurantName
           ? `${notification.subject.eventTitle} • ${notification.subject.restaurantName}`
@@ -318,26 +319,30 @@ const NotificationList: React.FC<NotificationListProps> = ({ unreadOnly = false 
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-4 border-b border-gray-200">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+          className={`px-4 py-2 rounded-none border-b-2 ${
             filter === 'all'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           All
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setFilter('unread')}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+          className={`px-4 py-2 rounded-none border-b-2 ${
             filter === 'unread'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           Unread {unreadCount > 0 && `(${unreadCount})`}
-        </button>
+        </Button>
       </div>
 
       {/* Notification List */}
