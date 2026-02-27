@@ -7,6 +7,7 @@ import NotificationBell from '../notifications/NotificationBell';
 import { useThemeContext } from '@/theme/ThemeProvider';
 import { useCompany } from '@/lib/api/hooks';
 import { isColorDark, resolveAssetUrl } from '@/theme/utils';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -139,17 +140,14 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
           }}
         >
           <div className="flex items-center gap-2 hidden sm:flex" aria-label="User information">
-            <User className="w-5 h-5" aria-hidden="true" style={{ color: useInvertedTone ? '#e2e8f0' : 'rgb(71 85 105)' }} />
-            <span className="text-sm font-medium" style={{ color: useInvertedTone ? '#f8fafc' : undefined }}>
+            <User className={cn("w-5 h-5", useInvertedTone ? "text-slate-200" : "text-slate-500")} aria-hidden="true" />
+            <span className={cn("text-sm font-medium", useInvertedTone && "text-slate-50")}>
               {user?.name}
             </span>
             {user?.role === 'ADMIN' && (
-              <span 
-                className="ml-2 px-2 py-1 text-xs rounded-full"
-                style={{
-                  background: theme.secondaryColor,
-                  color: isSecondaryDark ? '#f8fafc' : '#0f172a',
-                }}
+              <span
+                className={cn("ml-2 px-2 py-1 text-xs rounded-full", isSecondaryDark ? "text-slate-50" : "text-slate-900")}
+                style={{ background: theme.secondaryColor }}
                 role="status"
                 aria-label="Administrator role"
               >

@@ -41,10 +41,6 @@ const MobileNav: React.FC<MobileNavProps> = ({ isOpen, setIsOpen }) => {
           'fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden overflow-y-auto',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
-        style={{
-          backgroundColor: '#ffffff',
-          opacity: 1,
-        }}
         aria-label="Mobile navigation"
       >
         <div className="p-4 bg-white">
