@@ -238,7 +238,7 @@ export const refreshAccessToken = async (req: AuthRequest, res: Response) => {
   try {
     const refreshToken = extractRefreshTokenFromRequest(req);
     if (!refreshToken) {
-      return res.status(401).json({ error: 'Refresh token missing' });
+      return res.status(401).json({ message: 'Refresh token missing' });
     }
 
     const rotation = await rotateRefreshToken(refreshToken, {
@@ -260,7 +260,7 @@ export const refreshAccessToken = async (req: AuthRequest, res: Response) => {
     if (!user) {
       await revokeRefreshToken(rotation.token);
       clearRefreshTokenCookie(res);
-      return res.status(401).json({ error: 'Account no longer exists' });
+      return res.status(401).json({ message: 'Account no longer exists' });
     }
 
     const token = generateToken({
@@ -280,7 +280,7 @@ export const refreshAccessToken = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     if (error instanceof RefreshTokenError) {
       clearRefreshTokenCookie(res);
-      return res.status(401).json({ error: 'Invalid refresh token' });
+      return res.status(401).json({ message: 'Invalid refresh token' });
     }
     logger.error('Refresh token error:', error);
     return res.status(500).json({ message: 'Failed to refresh session' });

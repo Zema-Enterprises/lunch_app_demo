@@ -312,7 +312,7 @@ describe('Authentication Controller', () => {
         .get('/api/auth/me')
         .expect(401);
 
-      expect(response.body).toMatchObject({ error: 'No token provided' });
+      expect(response.body).toMatchObject({ message: 'No token provided' });
     });
 
     it('should not get user with invalid token', async () => {
@@ -321,7 +321,7 @@ describe('Authentication Controller', () => {
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
 
-      expect(response.body).toMatchObject({ error: 'Invalid or expired token' });
+      expect(response.body).toMatchObject({ message: 'Invalid or expired token' });
     });
   });
 

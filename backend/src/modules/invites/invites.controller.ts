@@ -37,13 +37,13 @@ export const createInvite = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     if (error instanceof InviteServiceError) {
       return res.status(error.status).json({
-        error: error.code,
+        code: error.code,
         message: error.message,
       });
     }
 
     logger.error('Create invite error:', error);
-    return res.status(500).json({ error: 'INVITE_CREATION_FAILED' });
+    return res.status(500).json({ message: 'Failed to create invite' });
   }
 };
 
@@ -56,7 +56,7 @@ export const listInvites = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('List invites error:', error);
-    return res.status(500).json({ error: 'INVITE_LIST_FAILED' });
+    return res.status(500).json({ message: 'Failed to list invites' });
   }
 };
 
@@ -102,14 +102,13 @@ export const redeemInvite = async (req: Request, res: Response) => {
     if (error instanceof InviteServiceError) {
       const status = error.status || 400;
       return res.status(status).json({
-        error: error.code,
+        code: error.code,
         message: error.message,
       });
     }
 
     logger.error('Redeem invite error:', error);
     return res.status(500).json({
-      error: 'INVITE_REDEMPTION_FAILED',
       message: 'Failed to redeem invite',
     });
   }

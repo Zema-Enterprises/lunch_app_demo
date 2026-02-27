@@ -15,7 +15,7 @@ export const authMiddleware = async (
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
+      return res.status(401).json({ message: 'No token provided' });
     }
 
     const token = authHeader.substring(7);
@@ -32,7 +32,7 @@ export const authMiddleware = async (
     });
 
     if (!databaseUser) {
-      return res.status(401).json({ error: 'Account no longer exists' });
+      return res.status(401).json({ message: 'Account no longer exists' });
     }
 
     req.user = {
@@ -43,7 +43,7 @@ export const authMiddleware = async (
     };
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
@@ -53,7 +53,7 @@ export const adminMiddleware = (
   next: NextFunction
 ) => {
   if (!req.user || req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Admin access required' });
+    return res.status(403).json({ message: 'Admin access required' });
   }
   next();
 };

@@ -92,7 +92,7 @@ export const updateRestaurant = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existing) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ message: 'Restaurant not found' });
     }
 
     // Sanitize text inputs

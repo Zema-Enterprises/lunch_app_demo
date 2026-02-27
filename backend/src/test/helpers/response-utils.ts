@@ -10,7 +10,7 @@ export const getData = (response: any) => response.body.data;
 
 /**
  * Extracts error array from validation error responses
- * Validation errors return { errors: [...] } instead of { error: '...' }
+ * Validation errors return { errors: [...] } instead of { message: '...' }
  */
 export const getErrors = (response: any) => response.body.errors;
 

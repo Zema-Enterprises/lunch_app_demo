@@ -399,9 +399,8 @@ describe('Restaurants Controller', () => {
         .send({ name: 'Update' })
         .expect(404);
 
-      // Error responses return { error: '...' }
-      expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toBe('Restaurant not found');
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toBe('Restaurant not found');
     });
   });
 
