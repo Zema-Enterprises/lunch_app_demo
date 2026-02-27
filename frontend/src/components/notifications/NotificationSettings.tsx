@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, Mail, Smartphone } from 'lucide-react';
 import { useNotificationSettings, useUpdateNotificationSettings, useUserPushSubscriptions } from '../../lib/api/hooks';
 import { Button } from '../ui/button';
@@ -21,14 +21,14 @@ import { useQueryClient } from '@tanstack/react-query';
  * - Success/error feedback
  */
 
+import { UserNotificationSettings, EditableNotificationKey } from '../../types';
+
 interface NotificationSetting {
-  key: keyof Omit<UserNotificationSettings, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'emailNotifications' | 'inAppNotifications'>;
+  key: EditableNotificationKey;
   label: string;
   description: string;
   icon: string;
 }
-
-import { UserNotificationSettings } from '../../types';
 
 const NOTIFICATION_SETTINGS: NotificationSetting[] = [
   {
@@ -93,11 +93,13 @@ const NotificationSettings: React.FC = () => {
   const { data: pushSubscriptions, isError: pushQueryError, failureReason } = useUserPushSubscriptions();
   const queryClient = useQueryClient();
 
-  const [localSettings, setLocalSettings] = useState<Partial<UserNotificationSettings>>({});
-  const [pendingKeys, setPendingKeys] = useState<Set<keyof UserNotificationSettings>>(new Set());
+  const [localSettings, setLocalSettings] = useState<UserNotificationSettings | null>(null);
+  const [originalSettings, setOriginalSettings] = useState<UserNotificationSettings | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [pushMessage, setPushMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isProcessingPush, setIsProcessingPush] = useState(false);
   const [browserPushStatus, setBrowserPushStatus] = useState<'idle' | 'enabled' | null>(null);
+  const [localPushStatus, setLocalPushStatus] = useState<'idle' | 'enabled' | null>(null);
   const pushFeatureEnabled = isPushFeatureEnabled();
 
   // Auto-clear success/info messages after 5 seconds
@@ -148,39 +150,75 @@ const NotificationSettings: React.FC = () => {
   }, [pushFeatureEnabled, isNetworkOrServerError]);
 
   // Per-user push status: backend data > browser fallback > idle
-  const pushStatus: 'idle' | 'enabled' = pushSubscriptions?.hasActiveSubscription
-    ? 'enabled'
-    : (browserPushStatus ?? 'idle');
+  const pushStatus: 'idle' | 'enabled' = localPushStatus
+    ?? (pushSubscriptions?.hasActiveSubscription ? 'enabled' : (browserPushStatus ?? 'idle'));
 
   // Initialize local settings when data is loaded
   useEffect(() => {
     if (settings) {
       setLocalSettings(settings);
+      setOriginalSettings(settings);
     }
   }, [settings]);
 
-  const handleToggle = async (key: keyof UserNotificationSettings) => {
-    const nextValue = !localSettings[key];
-    const previous = localSettings[key];
-    setLocalSettings((prev) => ({
-      ...prev,
-      [key]: nextValue,
-    }));
-    setPendingKeys((prev) => new Set(prev).add(key));
+  const editableKeys = useMemo<Array<EditableNotificationKey>>(
+    () => ([
+      'emailNotifications',
+      'inAppNotifications',
+      'notifyOnEventCreated',
+      'notifyOnUserJoinedEvent',
+      'notifyOnEventClosed',
+      'notifyOnEventDelivered',
+      'notifyOnPaymentConfirmed',
+      'notifyOnEventCompleted',
+      'notifyOnOrderPlaced',
+      'notifyOnOrderUpdated',
+      'notifyOnPaymentReminder',
+    ]),
+    []
+  );
 
-    try {
-      await updateSettings.mutateAsync({ [key]: nextValue } as Partial<UserNotificationSettings>);
-    } catch (error) {
-      setLocalSettings((prev) => ({
+  const hasUnsavedChanges = useMemo(() => {
+    if (!localSettings || !originalSettings) return false;
+    return editableKeys.some((key) => localSettings[key] !== originalSettings[key]);
+  }, [editableKeys, localSettings, originalSettings]);
+
+  const handleToggle = (key: EditableNotificationKey) => {
+    setLocalSettings((prev) => {
+      if (!prev) return prev;
+      return {
         ...prev,
-        [key]: previous,
-      }));
+        [key]: !prev[key],
+      };
+    });
+  };
+
+  const handleSave = async () => {
+    if (!localSettings || !originalSettings) return;
+    const updates: Partial<UserNotificationSettings> = {};
+    editableKeys.forEach((key) => {
+      if (localSettings[key] !== originalSettings[key]) {
+        updates[key] = localSettings[key];
+      }
+    });
+
+    if (Object.keys(updates).length === 0) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updated = await updateSettings.mutateAsync(updates);
+      setOriginalSettings(updated);
+      setLocalSettings(updated);
     } finally {
-      setPendingKeys((prev) => {
-        const copy = new Set(prev);
-        copy.delete(key);
-        return copy;
-      });
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (originalSettings) {
+      setLocalSettings(originalSettings);
     }
   };
 
@@ -196,6 +234,7 @@ const NotificationSettings: React.FC = () => {
       if (subscription) {
         // Refetch user's subscriptions to update status
         await queryClient.invalidateQueries({ queryKey: ['push-subscriptions'] });
+        setLocalPushStatus('enabled');
         setPushMessage({ text: 'Push notifications enabled successfully.', type: 'success' });
       } else {
         setPushMessage({ text: 'Push notifications permission was not granted.', type: 'info' });
@@ -226,6 +265,7 @@ const NotificationSettings: React.FC = () => {
       if (result) {
         // Refetch user's subscriptions to update status
         await queryClient.invalidateQueries({ queryKey: ['push-subscriptions'] });
+        setLocalPushStatus('idle');
         setPushMessage({ text: 'Push notifications disabled.', type: 'success' });
       } else {
         setPushMessage({ text: 'No active push subscription found.', type: 'info' });
@@ -271,6 +311,20 @@ const NotificationSettings: React.FC = () => {
         </p>
       </div>
 
+      {hasUnsavedChanges && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-medium">You have unsaved changes</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              Reset
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         {/* Global Settings */}
         <Card className="p-6">
@@ -293,7 +347,6 @@ const NotificationSettings: React.FC = () => {
                   aria-label="Toggle email notifications"
                   checked={localSettings.emailNotifications || false}
                   onChange={() => handleToggle('emailNotifications')}
-                  disabled={pendingKeys.has('emailNotifications')}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -317,7 +370,6 @@ const NotificationSettings: React.FC = () => {
                   aria-label="Toggle in-app notifications"
                   checked={localSettings.inAppNotifications || false}
                   onChange={() => handleToggle('inAppNotifications')}
-                  disabled={pendingKeys.has('inAppNotifications')}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -352,7 +404,7 @@ const NotificationSettings: React.FC = () => {
                         : 'Enable Push Notifications'
                       : 'Push Not Available'}
                 </Button>
-                {pushFeatureEnabled && pushStatus === 'enabled' && !pushMessage && (
+                {pushFeatureEnabled && pushStatus === 'enabled' && (
                   <p className="text-xs text-slate-500 text-right max-w-xs">
                     Push notifications are active on this device.
                   </p>
@@ -398,7 +450,6 @@ const NotificationSettings: React.FC = () => {
                     aria-label={`Toggle ${setting.label} notifications`}
                     checked={localSettings[setting.key] || false}
                     onChange={() => handleToggle(setting.key)}
-                    disabled={pendingKeys.has(setting.key)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>

@@ -163,6 +163,10 @@ export interface UserNotificationSettings {
   updatedAt: string;
 }
 
+export type EditableNotificationKey = {
+  [K in keyof UserNotificationSettings]: UserNotificationSettings[K] extends boolean ? K : never;
+}[keyof UserNotificationSettings];
+
 export interface NotificationStats {
   total: number;
   unread: number;
