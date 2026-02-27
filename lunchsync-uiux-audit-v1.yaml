@@ -1,0 +1,1172 @@
+schema_version: "promptbook/v1"
+name: "lunchsync-uiux-audit"
+version: "1.0.0"
+description: >
+  UI/UX audit and fix promptbook for LunchSync.
+  Generated from .claude/UI_UX_INSTRUCTIONS.md audit on 2026-02-28.
+  Violations found: 50+ total (2 CRITICAL categories, 4 HIGH categories, 4 QUALITY categories).
+  Domains with violations: accessibility, usability-heuristics, interaction-patterns, visual-design.
+
+defaults:
+  agent: "claude"
+  workspace_dir: "."
+  approval_mode: "auto"
+  timeout_minutes: 60
+
+global_rules:
+  - "Read .claude/UI_UX_INSTRUCTIONS.md before starting any step — it is your design law."
+  - "Preserve all existing functionality. Do NOT remove or rename any working features."
+  - "Follow existing code patterns and conventions in the codebase."
+  - "After each step: run the required verification commands and ensure all pass."
+  - "Commit after each step with message 'uiux/<step-id>: <step-title>'."
+  - "Do NOT add new dependencies unless the step explicitly requires it."
+  - "If a verify command fails, fix the root cause — never modify the verify command itself."
+  - "Always use <Button> from @/components/ui/button — never raw HTML <button>."
+  - "Always use <Input> from @/components/ui/input — never raw HTML <input> (except checkbox — no Checkbox component exists yet)."
+  - "All colors must use Tailwind utility classes — no hardcoded hex values in component files."
+  - "Icons must come from lucide-react only. Decorative icons get aria-hidden='true'. Icon-only buttons get aria-label."
+  - "Gate all destructive actions behind <ConfirmDialog> from @/components/ui/confirm-dialog with variant='danger' and isLoading prop."
+  - "Form error messages must use role='alert' for screen reader announcements."
+
+steps:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 0 — Orientation (always first, always read-only)
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "00-orientation"
+    title: "Read UI/UX instructions and confirm baseline"
+    agent: "claude"
+    prompt: |
+      Read `.claude/UI_UX_INSTRUCTIONS.md` in full. Do not modify any files.
+
+      Then run baseline checks and report:
+      ```bash
+      cd frontend && npm run lint 2>&1 | tail -20
+      cd frontend && npm run build 2>&1 | tail -20
+      ```
+
+      Report:
+      - Current lint error count and summary
+      - Current build status
+      - Confirmation you have read UI_UX_INSTRUCTIONS.md
+      - The Top 10 non-negotiable rules from that file (list them)
+
+    verify:
+      - "test -f .claude/UI_UX_INSTRUCTIONS.md"
+      - "echo 'orientation complete'"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # CRITICAL — Accessibility: Label associations (WCAG 2.1 Level A)
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "01-fix-form-label-associations"
+    title: "Add htmlFor/id associations to form labels in restaurant and menu dialogs"
+    prompt: |
+      ## Context
+      Rule 2 in .claude/UI_UX_INSTRUCTIONS.md requires every form input to have an
+      associated label via `htmlFor` on `<label>` matching `id` on the input. This is a
+      WCAG 2.1 Level A requirement. Screen readers cannot announce the label for inputs
+      without this association.
+
+      ## Violations found
+
+      ### File 1: `frontend/src/components/features/AddRestaurantDialog.tsx`
+
+      All 6 text input labels lack `htmlFor` and all inputs lack `id`. The checkbox
+      on line 127 already has correct `id="hasMenu"` and `htmlFor="hasMenu"` — leave it.
+
+      **Lines ~60-67 (Name field):**
+      ```tsx
+      <label className="text-sm font-medium">Name</label>
+      <Input
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        placeholder="Pizza Palace"
+        required
+      />
+      ```
+
+      **Fix:** Add `htmlFor="addRestaurant-name"` to the label and `id="addRestaurant-name"` to the Input.
+      Use the prefix `addRestaurant-` to avoid ID collisions when multiple dialogs exist.
+
+      Apply the same pattern to ALL 6 text input fields in this file:
+      - Name → `addRestaurant-name`
+      - Cuisine → `addRestaurant-cuisine`
+      - Open Time → `addRestaurant-openTime`
+      - Close Time → `addRestaurant-closeTime`
+      - Delivery Time → `addRestaurant-deliveryTime`
+      - Image URL → `addRestaurant-imageUrl`
+
+      ### File 2: `frontend/src/components/restaurants/EditRestaurantDialog.tsx`
+
+      Same pattern — all 6 text input labels lack `htmlFor`/`id`. The checkbox already
+      has correct associations.
+
+      **Lines ~80-87 (Name field):**
+      ```tsx
+      <label className="text-sm font-medium">Name</label>
+      <Input
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        placeholder="Pizza Palace"
+        required
+      />
+      ```
+
+      **Fix:** Use prefix `editRestaurant-`:
+      - Name → `editRestaurant-name`
+      - Cuisine → `editRestaurant-cuisine`
+      - Open Time → `editRestaurant-openTime`
+      - Close Time → `editRestaurant-closeTime`
+      - Delivery Time → `editRestaurant-deliveryTime`
+      - Image URL → `editRestaurant-imageUrl`
+
+      ### File 3: `frontend/src/components/menu/AddMenuItemDialog.tsx`
+
+      All 4 text input labels lack `htmlFor`/`id`. Checkbox already correct.
+
+      **Lines ~72-80 (Name field):**
+      ```tsx
+      <label className="text-sm font-medium">Name</label>
+      <Input
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        placeholder="Margherita Pizza"
+        required
+      />
+      ```
+
+      **Fix:** Use prefix `addMenuItem-`:
+      - Name → `addMenuItem-name`
+      - Description → `addMenuItem-description` (on the Textarea)
+      - Price → `addMenuItem-price`
+      - Category → `addMenuItem-category`
+
+      ### File 4: `frontend/src/components/menu/EditMenuItemDialog.tsx`
+
+      Same 4 fields missing. Checkbox already correct.
+
+      **Fix:** Use prefix `editMenuItem-`:
+      - Name → `editMenuItem-name`
+      - Description → `editMenuItem-description` (on the Textarea)
+      - Price → `editMenuItem-price`
+      - Category → `editMenuItem-category`
+
+      The corrected pattern for each field should look like:
+      ```tsx
+      <label htmlFor="addRestaurant-name" className="text-sm font-medium">Name</label>
+      <Input
+        id="addRestaurant-name"
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        placeholder="Pizza Palace"
+        required
+      />
+      ```
+
+      After fixing all fields, run verification commands.
+
+    verify:
+      - "grep -c 'htmlFor=' frontend/src/components/features/AddRestaurantDialog.tsx | grep -q '[6-9]'"
+      - "grep -c 'htmlFor=' frontend/src/components/restaurants/EditRestaurantDialog.tsx | grep -q '[6-9]'"
+      - "grep -c 'htmlFor=' frontend/src/components/menu/AddMenuItemDialog.tsx | grep -q '[4-9]'"
+      - "grep -c 'htmlFor=' frontend/src/components/menu/EditMenuItemDialog.tsx | grep -q '[4-9]'"
+      - "! grep -n '<label className=\"text-sm font-medium\">' frontend/src/components/features/AddRestaurantDialog.tsx | grep -v 'htmlFor'"
+      - "! grep -n '<label className=\"text-sm font-medium\">' frontend/src/components/restaurants/EditRestaurantDialog.tsx | grep -v 'htmlFor'"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # CRITICAL — Accessibility: role="alert" on error messages
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "02-add-role-alert-to-errors"
+    title: "Add role='alert' to all inline form error messages"
+    prompt: |
+      ## Context
+      Rule 9 in .claude/UI_UX_INSTRUCTIONS.md requires inline form errors to use
+      `role="alert"` so screen readers immediately announce validation errors.
+      Section 2.3 (ARIA Attributes) specifies: "Form errors: `role="alert"` on error
+      message elements."
+
+      ## Violations found
+
+      ### File 1: `frontend/src/components/settings/ChangePasswordDialog.tsx`
+
+      Three error messages missing `role="alert"`:
+
+      **Line ~116 (currentPassword error):**
+      ```tsx
+      {errors.currentPassword && (
+        <p className="text-sm text-red-500 mt-1">{errors.currentPassword}</p>
+      )}
+      ```
+
+      **Line ~133 (newPassword error):**
+      ```tsx
+      {errors.newPassword ? (
+        <p className="text-sm text-red-500 mt-1">{errors.newPassword}</p>
+      ) : (
+      ```
+
+      **Line ~152 (confirmPassword error):**
+      ```tsx
+      {errors.confirmPassword && (
+        <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
+      )}
+      ```
+
+      **Fix:** Add `role="alert"` to each error `<p>` tag:
+      ```tsx
+      <p role="alert" className="text-sm text-red-500 mt-1">{errors.currentPassword}</p>
+      ```
+
+      ### File 2: `frontend/src/components/features/CreateEventDialog.tsx`
+
+      **Line ~191 (deadline error):**
+      ```tsx
+      {deadlineError && (
+        <p className="text-sm text-red-500 mt-1">{deadlineError}</p>
+      )}
+      ```
+
+      **Fix:** Add `role="alert"`:
+      ```tsx
+      <p role="alert" className="text-sm text-red-500 mt-1">{deadlineError}</p>
+      ```
+
+      ### File 3: `frontend/src/pages/UserProfile.tsx`
+
+      **Line ~84 (name error):**
+      ```tsx
+      {errors.name && (
+        <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+      )}
+      ```
+
+      **Line ~104 (email error):**
+      ```tsx
+      {errors.email && (
+        <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+      )}
+      ```
+
+      **Fix:** Add `role="alert"` to both.
+
+      ### File 4: `frontend/src/pages/CompanySettings.tsx`
+
+      Search for all `<p className="text-sm text-red-500 mt-1">` patterns in this file.
+      There are approximately 5-6 error message elements. Add `role="alert"` to every one.
+
+      After fixing, run verification.
+
+    verify:
+      - "grep -c 'role=\"alert\"' frontend/src/components/settings/ChangePasswordDialog.tsx | grep -q '[3-9]'"
+      - "grep -q 'role=\"alert\"' frontend/src/components/features/CreateEventDialog.tsx"
+      - "grep -c 'role=\"alert\"' frontend/src/pages/UserProfile.tsx | grep -q '[2-9]'"
+      - "grep -c 'role=\"alert\"' frontend/src/pages/CompanySettings.tsx | grep -q '[3-9]'"
+      - "! grep 'text-red-500' frontend/src/components/settings/ChangePasswordDialog.tsx | grep -v 'role=\"alert\"' | grep -q 'errors\\.'"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Replace custom confirm dialogs with ConfirmDialog component
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "03-replace-custom-confirms"
+    title: "Replace custom confirmation dialogs with ConfirmDialog in Events and MenuManagement"
+    prompt: |
+      ## Context
+      Rule 5 in .claude/UI_UX_INSTRUCTIONS.md requires all destructive actions to use
+      `<ConfirmDialog>` from `@/components/ui/confirm-dialog` with `variant="danger"` and
+      `isLoading` prop. Several pages implement custom div-based confirm dialogs instead.
+
+      The `Restaurants.tsx` page already does this correctly — use it as the reference:
+      ```tsx
+      import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+
+      <ConfirmDialog
+        isOpen={!!deletingRestaurant}
+        onClose={() => setDeletingRestaurant(null)}
+        onConfirm={handleDelete}
+        title="Delete Restaurant"
+        message={`Are you sure you want to delete "${deletingRestaurant?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        isLoading={deleteRestaurant.isPending}
+      />
+      ```
+
+      ## Violations found
+
+      ### File 1: `frontend/src/pages/Events.tsx`
+
+      **Violation A — Delete confirm dialog (lines ~292-322):**
+      A custom div-based dialog with no `role="dialog"`, no `aria-modal`, no focus trap,
+      and no loading state on the delete button.
+
+      ```tsx
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setDeleteConfirmId(null)} />
+          <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-lg p-6">
+            ...
+            <Button variant="destructive" onClick={() => { deleteEvent(deleteConfirmId); setDeleteConfirmId(null); }}>
+              Delete Event
+            </Button>
+          </div>
+        </div>
+      )}
+      ```
+
+      **Fix:** Replace this entire block with:
+      ```tsx
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => { deleteEvent(deleteConfirmId!); setDeleteConfirmId(null); }}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This action cannot be undone and will remove all associated orders."
+        confirmText="Delete Event"
+        variant="danger"
+      />
+      ```
+
+      Note: To properly pass `isLoading`, destructure `isPending` from `useDeleteEvent`:
+      Change `const { mutate: deleteEvent } = useDeleteEvent();` to
+      `const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();`
+      Then add `isLoading={isDeleting}` to the ConfirmDialog.
+
+      **Violation B — Leave event confirm dialog (lines ~324-354):**
+      Same custom div pattern for the leave confirmation.
+
+      ```tsx
+      {leaveConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          ...
+        </div>
+      )}
+      ```
+
+      **Fix:** Replace with:
+      ```tsx
+      <ConfirmDialog
+        isOpen={!!leaveConfirmId}
+        onClose={() => setLeaveConfirmId(null)}
+        onConfirm={() => { leaveEvent(leaveConfirmId!); setLeaveConfirmId(null); }}
+        title="Leave Event"
+        message="Are you sure you want to leave this event? Your order will be cancelled if you have placed one."
+        confirmText="Leave Event"
+        variant="warning"
+      />
+      ```
+
+      Destructure `isPending` from `useLeaveEvent` and pass `isLoading`.
+
+      Add the import at top of file:
+      ```tsx
+      import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+      ```
+
+      ### File 2: `frontend/src/pages/MenuManagement.tsx`
+
+      **Violation — Delete confirm dialog (lines ~211-245):**
+      Same custom div pattern.
+
+      ```tsx
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          ...
+          <Button variant="destructive" onClick={() => { deleteMenuItem({...}); setDeleteConfirmId(null); }}>
+            Delete Item
+          </Button>
+        </div>
+      )}
+      ```
+
+      **Fix:** Replace with:
+      ```tsx
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => { deleteMenuItem({ restaurantId: id || '', itemId: deleteConfirmId! }); setDeleteConfirmId(null); }}
+        title="Delete Menu Item"
+        message="Are you sure you want to delete this menu item? This action cannot be undone."
+        confirmText="Delete Item"
+        variant="danger"
+      />
+      ```
+
+      Destructure `isPending` from `useDeleteMenuItem`:
+      Change `const { mutate: deleteMenuItem } = useDeleteMenuItem();` to
+      `const { mutate: deleteMenuItem, isPending: isDeletingItem } = useDeleteMenuItem();`
+      Then add `isLoading={isDeletingItem}`.
+
+      Add the import:
+      ```tsx
+      import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+      ```
+
+      After fixing both files, run verification.
+
+    verify:
+      - "grep -q 'ConfirmDialog' frontend/src/pages/Events.tsx"
+      - "grep -q \"from '@/components/ui/confirm-dialog'\" frontend/src/pages/Events.tsx"
+      - "! grep -q 'fixed inset-0 z-50 flex items-center justify-center' frontend/src/pages/Events.tsx"
+      - "grep -q 'ConfirmDialog' frontend/src/pages/MenuManagement.tsx"
+      - "grep -q \"from '@/components/ui/confirm-dialog'\" frontend/src/pages/MenuManagement.tsx"
+      - "! grep -q 'fixed inset-0 z-50 flex items-center justify-center' frontend/src/pages/MenuManagement.tsx"
+      - "grep -q 'isLoading' frontend/src/pages/Events.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Fix Orders page: window.confirm and custom modal
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "04-fix-orders-page"
+    title: "Replace window.confirm with ConfirmDialog and custom modal with Dialog in Orders"
+    prompt: |
+      ## Context
+      Rule 5 requires ConfirmDialog for destructive actions. Rule 4 says never use
+      `window.alert()`. The Orders page uses `window.confirm()` for cancelling orders
+      and a custom div-based modal for order details instead of the Dialog component.
+
+      ## Violations found
+
+      ### File: `frontend/src/pages/Orders.tsx`
+
+      **Violation A — window.confirm() on line ~47-54:**
+      ```tsx
+      const handleCancelOrder = (order: OrderWithEvent) => {
+        if (window.confirm('Are you sure you want to cancel this order?')) {
+          cancelOrder({
+            eventId: order.eventId,
+            orderId: order.id,
+          });
+        }
+      };
+      ```
+
+      **Fix:** Add state for the confirm dialog and replace `window.confirm`:
+
+      1. Add state: `const [cancellingOrder, setCancellingOrder] = useState<OrderWithEvent | null>(null);`
+      2. Destructure isPending: change `const { mutate: cancelOrder } = useCancelOrder();`
+         to `const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder();`
+      3. Replace `handleCancelOrder`:
+         ```tsx
+         const handleCancelOrder = (order: OrderWithEvent) => {
+           setCancellingOrder(order);
+         };
+         ```
+      4. Add ConfirmDialog at end of JSX (before closing `</div>`):
+         ```tsx
+         <ConfirmDialog
+           isOpen={!!cancellingOrder}
+           onClose={() => setCancellingOrder(null)}
+           onConfirm={() => {
+             if (cancellingOrder) {
+               cancelOrder({ eventId: cancellingOrder.eventId, orderId: cancellingOrder.id });
+               setCancellingOrder(null);
+             }
+           }}
+           title="Cancel Order"
+           message={`Are you sure you want to cancel your order for "${cancellingOrder?.event?.title || 'this event'}"?`}
+           confirmText="Cancel Order"
+           variant="danger"
+           isLoading={isCancelling}
+         />
+         ```
+
+      **Violation B — Custom order details modal (lines ~222-303):**
+      ```tsx
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setSelectedOrder(null)} />
+          <div className="relative z-50 w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg p-6">
+            ...
+          </div>
+        </div>
+      )}
+      ```
+
+      **Fix:** Replace with the Dialog component from `@/components/ui/dialog`:
+      ```tsx
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent onClose={() => setSelectedOrder(null)} className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>
+              Details for your order from {selectedOrder?.event?.restaurant?.name || 'the restaurant'}
+            </DialogDescription>
+          </DialogHeader>
+          {/* Move the existing modal content here (the space-y-4 div contents) */}
+          ...existing content...
+          <DialogFooter>
+            <Button onClick={() => setSelectedOrder(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      ```
+
+      Add imports at the top:
+      ```tsx
+      import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+      import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+      ```
+
+      After fixing, run verification.
+
+    verify:
+      - "! grep -q 'window.confirm' frontend/src/pages/Orders.tsx"
+      - "grep -q 'ConfirmDialog' frontend/src/pages/Orders.tsx"
+      - "grep -q 'DialogContent' frontend/src/pages/Orders.tsx"
+      - "! grep 'fixed inset-0 z-50 flex items-center justify-center' frontend/src/pages/Orders.tsx"
+      - "grep -q 'isLoading' frontend/src/pages/Orders.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Add loading states to submit buttons
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "05-add-submit-loading-states"
+    title: "Add loading state to submit buttons in CreateEventDialog and EditEventDialog"
+    prompt: |
+      ## Context
+      Rule 3 in .claude/UI_UX_INSTRUCTIONS.md requires showing loading state for every
+      async operation. Domain 1.5 says: "Disable submit buttons during pending mutations."
+      Two event dialog forms have submit buttons that remain active during mutation.
+
+      ## Violations found
+
+      ### File 1: `frontend/src/components/features/CreateEventDialog.tsx`
+
+      **Line ~219:**
+      ```tsx
+      <Button type="submit">Create Event</Button>
+      ```
+
+      The mutation is `const { mutateAsync: createEvent } = useCreateEvent();` (line 16).
+
+      **Fix:** Destructure `isPending`:
+      ```tsx
+      const { mutateAsync: createEvent, isPending } = useCreateEvent();
+      ```
+      Then update the submit button:
+      ```tsx
+      <Button type="submit" disabled={isPending}>
+        {isPending ? 'Creating...' : 'Create Event'}
+      </Button>
+      ```
+
+      ### File 2: `frontend/src/components/events/EditEventDialog.tsx`
+
+      **Line ~228:**
+      ```tsx
+      <Button type="submit">Update Event</Button>
+      ```
+
+      The mutation is `const { mutateAsync: updateEvent } = useUpdateEvent();` (line 18).
+
+      **Fix:** Destructure `isPending`:
+      ```tsx
+      const { mutateAsync: updateEvent, isPending } = useUpdateEvent();
+      ```
+      Then update the submit button:
+      ```tsx
+      <Button type="submit" disabled={isPending}>
+        {isPending ? 'Updating...' : 'Update Event'}
+      </Button>
+      ```
+
+      After fixing, run verification.
+
+    verify:
+      - "grep -q 'isPending' frontend/src/components/features/CreateEventDialog.tsx"
+      - "grep -q 'disabled={isPending}' frontend/src/components/features/CreateEventDialog.tsx"
+      - "grep -q \"Creating\" frontend/src/components/features/CreateEventDialog.tsx"
+      - "grep -q 'isPending' frontend/src/components/events/EditEventDialog.tsx"
+      - "grep -q 'disabled={isPending}' frontend/src/components/events/EditEventDialog.tsx"
+      - "grep -q \"Updating\" frontend/src/components/events/EditEventDialog.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Add DialogDescription to dialogs
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "06-add-dialog-descriptions"
+    title: "Add DialogDescription to restaurant and menu dialogs for screen reader context"
+    prompt: |
+      ## Context
+      Domain 1.10 in .claude/UI_UX_INSTRUCTIONS.md says: "Use `DialogDescription` to
+      provide context in every dialog." The DialogDescription provides an accessible
+      description for the dialog that screen readers announce. Four dialogs are missing it.
+
+      ## Violations found
+
+      ### File 1: `frontend/src/components/features/AddRestaurantDialog.tsx`
+      **Lines ~55-57:**
+      ```tsx
+      <DialogHeader>
+        <DialogTitle>Add Restaurant</DialogTitle>
+      </DialogHeader>
+      ```
+
+      **Fix:** Import `DialogDescription` and add it:
+      ```tsx
+      import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+      ...
+      <DialogHeader>
+        <DialogTitle>Add Restaurant</DialogTitle>
+        <DialogDescription>Add a new restaurant for your team to order from.</DialogDescription>
+      </DialogHeader>
+      ```
+
+      ### File 2: `frontend/src/components/restaurants/EditRestaurantDialog.tsx`
+      **Lines ~75-77:**
+      ```tsx
+      <DialogHeader>
+        <DialogTitle>Edit Restaurant</DialogTitle>
+      </DialogHeader>
+      ```
+
+      **Fix:** Add to imports and JSX:
+      ```tsx
+      import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+      ...
+      <DialogHeader>
+        <DialogTitle>Edit Restaurant</DialogTitle>
+        <DialogDescription>Update the restaurant details below.</DialogDescription>
+      </DialogHeader>
+      ```
+
+      ### File 3: `frontend/src/components/menu/AddMenuItemDialog.tsx`
+      **Lines ~68-70:**
+      ```tsx
+      <DialogHeader>
+        <DialogTitle>Add Menu Item</DialogTitle>
+      </DialogHeader>
+      ```
+
+      **Fix:**
+      ```tsx
+      import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+      ...
+      <DialogHeader>
+        <DialogTitle>Add Menu Item</DialogTitle>
+        <DialogDescription>Add a new item to the restaurant menu.</DialogDescription>
+      </DialogHeader>
+      ```
+
+      ### File 4: `frontend/src/components/menu/EditMenuItemDialog.tsx`
+      **Lines ~77-79:**
+      ```tsx
+      <DialogHeader>
+        <DialogTitle>Edit Menu Item</DialogTitle>
+      </DialogHeader>
+      ```
+
+      **Fix:**
+      ```tsx
+      import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+      ...
+      <DialogHeader>
+        <DialogTitle>Edit Menu Item</DialogTitle>
+        <DialogDescription>Update the menu item details below.</DialogDescription>
+      </DialogHeader>
+      ```
+
+      After fixing, run verification.
+
+    verify:
+      - "grep -q 'DialogDescription' frontend/src/components/features/AddRestaurantDialog.tsx"
+      - "grep -q 'DialogDescription' frontend/src/components/restaurants/EditRestaurantDialog.tsx"
+      - "grep -q 'DialogDescription' frontend/src/components/menu/AddMenuItemDialog.tsx"
+      - "grep -q 'DialogDescription' frontend/src/components/menu/EditMenuItemDialog.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # QUALITY — Fix icon accessibility and replace emoji with lucide-react
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "07-fix-icon-accessibility"
+    title: "Fix decorative icon aria-hidden, icon-only button aria-label, emoji icons, and raw button"
+    prompt: |
+      ## Context
+      Rule 7 in .claude/UI_UX_INSTRUCTIONS.md requires:
+      - Decorative icons (next to text) get `aria-hidden="true"`
+      - Icon-only buttons get `aria-label`
+      - All icons must come from lucide-react (no emoji)
+      Rule 1 requires all interactive elements use design system components.
+
+      ## Violations found
+
+      ### File 1: `frontend/src/components/restaurants/EditRestaurantDialog.tsx`
+      **Lines ~65-71 — Icon-only edit button missing `aria-label`:**
+      ```tsx
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setIsOpen(true)}
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      ```
+
+      **Fix:**
+      ```tsx
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setIsOpen(true)}
+        aria-label="Edit restaurant"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      ```
+
+      ### File 2: `frontend/src/components/menu/EditMenuItemDialog.tsx`
+      **Lines ~67-73 — Icon-only edit button missing `aria-label`:**
+      ```tsx
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setIsOpen(true)}
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      ```
+
+      **Fix:**
+      ```tsx
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setIsOpen(true)}
+        aria-label="Edit menu item"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      ```
+
+      ### File 3: `frontend/src/pages/MenuManagement.tsx`
+      **Lines ~168-175 — Icon-only delete button missing `aria-label`:**
+      ```tsx
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+        onClick={() => setDeleteConfirmId(item.id)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      ```
+
+      **Fix:**
+      ```tsx
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+        onClick={() => setDeleteConfirmId(item.id)}
+        aria-label="Delete menu item"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      ```
+
+      ### File 4: `frontend/src/pages/Restaurants.tsx`
+      **Lines ~111-112 — Emoji characters instead of lucide-react icons:**
+      ```tsx
+      <p>🕐 {restaurant.openTime} - {restaurant.closeTime}</p>
+      <p>🚚 Delivery: {restaurant.deliveryTime} mins</p>
+      ```
+
+      **Fix:** Import `Clock` and `Truck` from lucide-react and replace emojis:
+      ```tsx
+      import { Utensils, Clock, Truck } from 'lucide-react';
+      ...
+      <p className="flex items-center gap-1.5">
+        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+        {restaurant.openTime} - {restaurant.closeTime}
+      </p>
+      <p className="flex items-center gap-1.5">
+        <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+        Delivery: {restaurant.deliveryTime} mins
+      </p>
+      ```
+      Keep the existing `text-sm text-muted-foreground` classes on the parent `<div>` or `<p>`.
+
+      ### File 5: `frontend/src/components/ui/confirm-dialog.tsx`
+      **Lines ~55-61 — Raw `<button>` for close instead of `<Button>`:**
+      ```tsx
+      <button
+        onClick={onClose}
+        className="rounded-sm opacity-70 hover:opacity-100"
+        disabled={isLoading}
+      >
+        <X className="h-4 w-4" />
+      </button>
+      ```
+
+      **Fix:** Replace with design system Button:
+      ```tsx
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClose}
+        disabled={isLoading}
+        className="rounded-sm opacity-70 hover:opacity-100"
+        aria-label="Close"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+      ```
+
+      After fixing all files, run verification.
+
+    verify:
+      - "grep -q 'aria-label=\"Edit restaurant\"' frontend/src/components/restaurants/EditRestaurantDialog.tsx"
+      - "grep -q 'aria-label=\"Edit menu item\"' frontend/src/components/menu/EditMenuItemDialog.tsx"
+      - "grep -q 'aria-label=\"Delete menu item\"' frontend/src/pages/MenuManagement.tsx"
+      - "! grep -q '🕐\\|🚚' frontend/src/pages/Restaurants.tsx"
+      - "grep -q 'Clock' frontend/src/pages/Restaurants.tsx"
+      - "grep -q 'Truck' frontend/src/pages/Restaurants.tsx"
+      - "! grep '<button' frontend/src/components/ui/confirm-dialog.tsx"
+      - "grep -q 'aria-label=\"Close\"' frontend/src/components/ui/confirm-dialog.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # QUALITY — Use Skeleton component instead of custom HTML
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "08-use-skeleton-components"
+    title: "Replace custom animate-pulse skeleton HTML with Skeleton component in page loading states"
+    prompt: |
+      ## Context
+      Rule 3 in .claude/UI_UX_INSTRUCTIONS.md says: "Use TanStack Query's `isLoading` /
+      `isPending` to render `<Skeleton />` for content areas." Three pages build custom
+      skeleton HTML with `animate-pulse` and `bg-gray-200` divs instead of using the
+      `<Skeleton />` component from `@/components/ui/skeleton`.
+
+      The `Skeleton` component API is simple — it's a div with `animate-pulse rounded-md bg-slate-200`
+      that accepts a `className` for sizing:
+      ```tsx
+      <Skeleton className="h-6 w-3/4" />
+      ```
+
+      ## Violations found
+
+      ### File 1: `frontend/src/pages/Events.tsx`
+      **Lines ~78-95 — Custom skeleton loading:**
+      ```tsx
+      if (isLoading) {
+        return (
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Events</h1>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-6 animate-pulse">
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      ```
+
+      **Fix:** Import Skeleton and replace:
+      ```tsx
+      import { Skeleton } from '@/components/ui/skeleton';
+      ...
+      if (isLoading) {
+        return (
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Events</h1>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-6">
+                  <Skeleton className="h-6 w-3/4 mb-4" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      ```
+
+      ### File 2: `frontend/src/pages/Orders.tsx`
+      **Lines ~56-72 — Custom skeleton loading:**
+      ```tsx
+      if (isLoading) {
+        return (
+          <div className="space-y-6">
+            <h1 className="text-3xl font-bold">My Orders</h1>
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      ```
+
+      **Fix:**
+      ```tsx
+      import { Skeleton } from '@/components/ui/skeleton';
+      ...
+      if (isLoading) {
+        return (
+          <div className="space-y-6">
+            <h1 className="text-3xl font-bold">My Orders</h1>
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <Skeleton className="h-6 w-3/4 mb-4" />
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      ```
+
+      ### File 3: `frontend/src/pages/MenuManagement.tsx`
+      **Lines ~42-51 — Custom skeleton loading:**
+      ```tsx
+      if (restaurantLoading || menuItemsLoading) {
+        return (
+          <div className="p-6">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+              <div className="h-64 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        );
+      }
+      ```
+
+      **Fix:**
+      ```tsx
+      import { Skeleton } from '@/components/ui/skeleton';
+      ...
+      if (restaurantLoading || menuItemsLoading) {
+        return (
+          <div className="p-6">
+            <Skeleton className="h-8 w-1/4 mb-6" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        );
+      }
+      ```
+
+      After fixing all three, run verification.
+
+    verify:
+      - "grep -q \"from '@/components/ui/skeleton'\" frontend/src/pages/Events.tsx"
+      - "grep -q '<Skeleton' frontend/src/pages/Events.tsx"
+      - "! grep -q 'bg-gray-200' frontend/src/pages/Events.tsx"
+      - "grep -q \"from '@/components/ui/skeleton'\" frontend/src/pages/Orders.tsx"
+      - "grep -q '<Skeleton' frontend/src/pages/Orders.tsx"
+      - "! grep -q 'bg-gray-200' frontend/src/pages/Orders.tsx"
+      - "grep -q '<Skeleton' frontend/src/pages/MenuManagement.tsx"
+      - "! grep -q 'bg-gray-200' frontend/src/pages/MenuManagement.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # QUALITY — Use Badge variants instead of getStatusColor
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "09-use-badge-variants"
+    title: "Replace getStatusColor() functions with proper Badge variant props"
+    prompt: |
+      ## Context
+      Domain 1.6 in .claude/UI_UX_INSTRUCTIONS.md says: "Use `Badge` to display event
+      status with color coding" using specific variants:
+      - OPEN: `variant="success"` (green)
+      - CLOSED: `variant="secondary"` (slate)
+      - COMPLETED: `variant="default"` (dark)
+      - CANCELLED: `variant="destructive"` (red)
+
+      Three files define a `getStatusColor()` function that returns raw Tailwind classes
+      like `bg-green-500` and applies them via `className`, bypassing the Badge variant system.
+
+      The Badge component (in `frontend/src/components/ui/badge.tsx`) supports variants:
+      `default`, `secondary`, `destructive`, `outline`, `success`.
+
+      ## Fix
+
+      Create a shared helper function. Add this to the top of each file (or better, to
+      a shared utils file, but to minimize changes, add to each file):
+
+      ```tsx
+      const getStatusVariant = (status: string): 'success' | 'secondary' | 'default' | 'destructive' => {
+        switch (status) {
+          case 'OPEN': return 'success';
+          case 'CLOSED': return 'secondary';
+          case 'COMPLETED': return 'default';
+          case 'CANCELLED': return 'destructive';
+          default: return 'secondary';
+        }
+      };
+      ```
+
+      ### File 1: `frontend/src/pages/Events.tsx`
+
+      **Remove** the `getStatusColor` function (lines ~31-44).
+      **Replace** all `<Badge className={getStatusColor(event.status)}>` with
+      `<Badge variant={getStatusVariant(event.status)}>`.
+
+      On line ~164:
+      ```tsx
+      // BEFORE
+      <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+      // AFTER
+      <Badge variant={getStatusVariant(event.status)}>{event.status}</Badge>
+      ```
+
+      ### File 2: `frontend/src/pages/Orders.tsx`
+
+      **Remove** the `getEventStatusColor` function (lines ~28-41).
+      **Replace** all `<Badge className={getEventStatusColor(...)}>` with
+      `<Badge variant={getStatusVariant(...)}>`.
+
+      On line ~105:
+      ```tsx
+      // BEFORE
+      <Badge className={getEventStatusColor(order.event?.status || '')}>{order.event?.status}</Badge>
+      // AFTER
+      <Badge variant={getStatusVariant(order.event?.status || '')}>{order.event?.status}</Badge>
+      ```
+
+      Also on line ~250 in the order details section:
+      ```tsx
+      // BEFORE
+      <Badge className={`ml-2 ${getEventStatusColor(selectedOrder.event?.status || '')}`}>{selectedOrder.event?.status}</Badge>
+      // AFTER
+      <Badge className="ml-2" variant={getStatusVariant(selectedOrder.event?.status || '')}>{selectedOrder.event?.status}</Badge>
+      ```
+
+      ### File 3: `frontend/src/components/events/EventDetailsModal.tsx`
+
+      **Remove** the `getStatusColor` function (lines ~42-55).
+      **Replace** on line ~91:
+      ```tsx
+      // BEFORE
+      <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+      // AFTER
+      <Badge variant={getStatusVariant(event.status)}>{event.status}</Badge>
+      ```
+
+      After fixing all three files, run verification.
+
+    verify:
+      - "! grep -q 'getStatusColor' frontend/src/pages/Events.tsx"
+      - "grep -q 'getStatusVariant' frontend/src/pages/Events.tsx"
+      - "! grep -q 'getEventStatusColor' frontend/src/pages/Orders.tsx"
+      - "grep -q 'getStatusVariant' frontend/src/pages/Orders.tsx"
+      - "! grep -q 'getStatusColor' frontend/src/components/events/EventDetailsModal.tsx"
+      - "grep -q 'getStatusVariant' frontend/src/components/events/EventDetailsModal.tsx"
+      - "cd frontend && npm run lint 2>&1 | tail -5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Final step — always last
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "10-final-verify"
+    title: "Final verification: lint clean, build green, audit report generated"
+    prompt: |
+      Run the full verification suite:
+      ```bash
+      cd frontend && npm run lint
+      cd frontend && npm run build
+      ```
+
+      Fix any remaining issues introduced during this audit.
+
+      Then write `UIUX_AUDIT_REPORT.md` at the project root containing:
+
+      ```markdown
+      # LunchSync UI/UX Audit Report
+
+      **Date:** 2026-02-28
+      **Source:** .claude/UI_UX_INSTRUCTIONS.md
+      **Auditor:** AI Agent (Promptbook Runner)
+
+      ## Summary
+
+      | Severity | Found | Fixed | Remaining |
+      |----------|-------|-------|-----------|
+      | CRITICAL | <count> | <count> | <count> |
+      | HIGH     | <count> | <count> | <count> |
+      | QUALITY  | <count> | <count> | <count> |
+      | **Total** | **<count>** | **<count>** | **<count>** |
+
+      ## Violations Fixed
+
+      ### CRITICAL
+      1. **Form label associations** — Added htmlFor/id to ~20 form fields across 4 dialog components
+      2. **Error message role="alert"** — Added role="alert" to ~12 inline error messages across 4 files
+
+      ### HIGH
+      3. **Custom confirm dialogs → ConfirmDialog** — Replaced 3 custom div-based confirms in Events.tsx and MenuManagement.tsx
+      4. **window.confirm → ConfirmDialog** — Replaced window.confirm in Orders.tsx; replaced custom modal with Dialog
+      5. **Submit button loading states** — Added disabled + loading text to CreateEventDialog and EditEventDialog
+      6. **Missing DialogDescription** — Added to 4 restaurant/menu dialogs
+
+      ### QUALITY
+      7. **Icon accessibility** — Added aria-label to 3 icon-only buttons, replaced emoji with lucide-react icons in Restaurants.tsx, fixed raw button in ConfirmDialog
+      8. **Skeleton components** — Replaced custom animate-pulse HTML with <Skeleton /> in 3 pages
+      9. **Badge variants** — Replaced getStatusColor() with proper Badge variant prop in 3 files
+
+      ## Files Modified
+
+      <list all files modified during this audit>
+
+      ## Violations NOT Fixed (Out of Scope)
+
+      1. **Raw HTML checkboxes** (4 files) — AddRestaurantDialog, EditRestaurantDialog, AddMenuItemDialog, EditMenuItemDialog use `<input type="checkbox">`. No `<Checkbox>` component exists in `@/components/ui/`. Fixing requires creating a new Checkbox component first.
+      2. **Custom dialog in CreateEventDialog** — Uses custom div-based dialog instead of `<Dialog>` from ui library. Has good ARIA attributes already (role="dialog", aria-modal, aria-labelledby). Refactoring to use Dialog component is a larger change that should be done separately.
+      3. **Custom dialog in EditEventDialog** — Same as above.
+      4. **Custom dialog in ChangePasswordDialog** — Same pattern. Has proper labels but custom dialog implementation.
+      5. **eslint-plugin-jsx-a11y not installed** — Recommended in UI_UX_INSTRUCTIONS.md but requires adding a new dependency and ESLint config changes.
+
+      ## Final Status
+
+      - **Lint:** <PASS/FAIL with details>
+      - **Build:** <PASS/FAIL with details>
+      - **Accessibility:** Manual review recommended for custom dialog components
+      ```
+
+      Fill in the actual counts based on what was fixed. Check lint and build output and
+      include the actual status.
+
+    verify:
+      - "cd frontend && npm run lint"
+      - "cd frontend && npm run build"
+      - "test -f UIUX_AUDIT_REPORT.md"
+      - "grep -q 'CRITICAL' UIUX_AUDIT_REPORT.md"
+      - "grep -q 'HIGH' UIUX_AUDIT_REPORT.md"
+      - "grep -q 'Files Modified' UIUX_AUDIT_REPORT.md"
+
+metadata:
+  tags:
+    - "ui-ux"
+    - "accessibility"
+    - "audit"
+    - "lunchsync"
+    - "react"
+    - "tailwind"
+    - "shadcn-ui"
+  created_at: "2026-02-28T00:00:00Z"
+  source_instructions: ".claude/UI_UX_INSTRUCTIONS.md"

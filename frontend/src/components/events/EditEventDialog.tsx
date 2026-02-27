@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { useUpdateEvent, useRestaurants } from '@/lib/api/hooks';
-import { X, Edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { Event } from '@/types';
 import { format } from 'date-fns';
 
@@ -15,9 +16,9 @@ interface EditEventDialogProps {
 
 export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { mutateAsync: updateEvent } = useUpdateEvent();
+  const { mutateAsync: updateEvent, isPending } = useUpdateEvent();
   const { data: restaurants = [] } = useRestaurants();
-  
+
   const [formData, setFormData] = useState({
     title: event.title,
     description: event.description || '',
@@ -32,7 +33,7 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
       // Convert ISO date to datetime-local format
       const deadline = new Date(event.orderDeadline);
       const formattedDeadline = format(deadline, "yyyy-MM-dd'T'HH:mm");
-      
+
       setFormData({
         title: event.title,
         description: event.description || '',
@@ -46,7 +47,7 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       await updateEvent({
         eventId: event.id,
@@ -55,7 +56,7 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
           orderDeadline: new Date(formData.orderDeadline).toISOString(),
         }
       });
-      
+
       setIsOpen(false);
       onClose?.();
     } catch {
@@ -67,20 +68,6 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
     setIsOpen(false);
     onClose?.();
   };
-
-  if (!isOpen) {
-    return (
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => setIsOpen(true)}
-        title="Edit Event"
-        aria-label="Edit event"
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-    );
-  }
 
   return (
     <>
@@ -94,35 +81,12 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
         <Edit className="h-4 w-4" />
       </Button>
 
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-event-dialog-title"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            handleClose();
-          }
-        }}
-      >
-        <div
-          className="w-full max-w-lg bg-white rounded-lg shadow-lg p-6 max-h-[90vh] overflow-y-auto"
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h2 id="edit-event-dialog-title" className="text-xl font-semibold">
-              Edit Event
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="rounded-sm opacity-70 hover:opacity-100"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); else setIsOpen(true); }}>
+        <DialogContent onClose={handleClose}>
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+            <DialogDescription>Update the event details below.</DialogDescription>
+          </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -221,15 +185,17 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
               </Select>
             </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit">Update Event</Button>
-            </div>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Updating...' : 'Update Event'}
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

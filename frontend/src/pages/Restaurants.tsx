@@ -9,7 +9,7 @@ import AddRestaurantDialog from '@/components/features/AddRestaurantDialog';
 import { EditRestaurantDialog } from '@/components/restaurants/EditRestaurantDialog';
 import { SkeletonCardGrid } from '@/components/loading/SkeletonLoaders';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Utensils } from 'lucide-react';
+import { Utensils, Clock, Truck } from 'lucide-react';
 import type { Restaurant } from '@/types';
 
 export default function Restaurants() {
@@ -108,8 +108,14 @@ export default function Restaurants() {
               
               <CardContent>
                 <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>🕐 {restaurant.openTime} - {restaurant.closeTime}</p>
-                  <p>� Delivery: {restaurant.deliveryTime} mins</p>
+                  <p className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                    {restaurant.openTime} - {restaurant.closeTime}
+                  </p>
+                  <p className="flex items-center gap-1.5">
+                    <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+                    Delivery: {restaurant.deliveryTime} mins
+                  </p>
                   {restaurant.cuisine && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {restaurant.cuisine.split(',').map((c) => (

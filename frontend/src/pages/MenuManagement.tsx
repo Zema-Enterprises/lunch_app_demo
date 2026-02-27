@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRestaurant, useMenuItems, useDeleteMenuItem, useToggleMenuItemAvailability } from '@/lib/api/hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Trash2, DollarSign, Search } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AddMenuItemDialog } from '@/components/menu/AddMenuItemDialog';
 import { EditMenuItemDialog } from '@/components/menu/EditMenuItemDialog';
 import { MenuItem } from '@/types';
@@ -16,7 +18,7 @@ const MenuManagement = () => {
   const navigate = useNavigate();
   const { data: restaurant, isLoading: restaurantLoading } = useRestaurant(id || '');
   const { data: menuItems = [], isLoading: menuItemsLoading } = useMenuItems(id || '');
-  const { mutate: deleteMenuItem } = useDeleteMenuItem();
+  const { mutate: deleteMenuItem, isPending: isDeletingItem } = useDeleteMenuItem();
   const { mutate: toggleAvailability } = useToggleMenuItemAvailability();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,10 +44,8 @@ const MenuManagement = () => {
   if (restaurantLoading || menuItemsLoading) {
     return (
       <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
+        <Skeleton className="h-8 w-1/4 mb-6" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -170,6 +170,7 @@ const MenuManagement = () => {
                       variant="ghost"
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       onClick={() => setDeleteConfirmId(item.id)}
+                      aria-label="Delete menu item"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -209,40 +210,16 @@ const MenuManagement = () => {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setDeleteConfirmId(null)}
-          />
-          <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">Delete Menu Item</h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete this menu item? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirmId(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  deleteMenuItem({
-                    restaurantId: id || '',
-                    itemId: deleteConfirmId,
-                  });
-                  setDeleteConfirmId(null);
-                }}
-              >
-                Delete Item
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => { deleteMenuItem({ restaurantId: id || '', itemId: deleteConfirmId! }); setDeleteConfirmId(null); }}
+        title="Delete Menu Item"
+        message="Are you sure you want to delete this menu item? This action cannot be undone."
+        confirmText="Delete Item"
+        variant="danger"
+        isLoading={isDeletingItem}
+      />
     </div>
   );
 };

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCreateMenuItem } from '@/lib/api/hooks';
 import { Plus } from 'lucide-react';
 
@@ -67,11 +68,13 @@ export function AddMenuItemDialog({ restaurantId }: AddMenuItemDialogProps) {
         <DialogContent onClose={() => setIsOpen(false)}>
           <DialogHeader>
             <DialogTitle>Add Menu Item</DialogTitle>
+            <DialogDescription>Add a new item to the restaurant menu.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name</label>
+              <label htmlFor="addMenuItem-name" className="text-sm font-medium">Name</label>
               <Input
+                id="addMenuItem-name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
@@ -81,8 +84,9 @@ export function AddMenuItemDialog({ restaurantId }: AddMenuItemDialogProps) {
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+              <label htmlFor="addMenuItem-description" className="text-sm font-medium">Description</label>
               <Textarea
+                id="addMenuItem-description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
@@ -93,8 +97,9 @@ export function AddMenuItemDialog({ restaurantId }: AddMenuItemDialogProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Price ($)</label>
+                <label htmlFor="addMenuItem-price" className="text-sm font-medium">Price ($)</label>
                 <Input
+                  id="addMenuItem-price"
                   name="price"
                   type="number"
                   step="0.01"
@@ -107,8 +112,9 @@ export function AddMenuItemDialog({ restaurantId }: AddMenuItemDialogProps) {
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
+                <label htmlFor="addMenuItem-category" className="text-sm font-medium">Category</label>
                 <Input
+                  id="addMenuItem-category"
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
@@ -119,13 +125,11 @@ export function AddMenuItemDialog({ restaurantId }: AddMenuItemDialogProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="available"
                 name="available"
                 checked={formData.available}
                 onChange={handleChange}
-                className="w-4 h-4 rounded border-gray-300"
               />
               <label htmlFor="available" className="text-sm font-medium">
                 Available for ordering

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useUserOrders, useCancelOrder } from '@/lib/api/hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ShoppingCart, Calendar, MapPin, DollarSign, Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Order } from '@/types';
@@ -22,21 +25,17 @@ interface OrderWithEvent extends Order {
 
 const Orders = () => {
   const { data: orders = [], isLoading } = useUserOrders();
-  const { mutate: cancelOrder } = useCancelOrder();
+  const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder();
   const [selectedOrder, setSelectedOrder] = useState<OrderWithEvent | null>(null);
+  const [cancellingOrder, setCancellingOrder] = useState<OrderWithEvent | null>(null);
 
-  const getEventStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'success' | 'secondary' | 'default' | 'destructive' => {
     switch (status) {
-      case 'OPEN':
-        return 'bg-green-500';
-      case 'CLOSED':
-        return 'bg-yellow-500';
-      case 'COMPLETED':
-        return 'bg-blue-500';
-      case 'CANCELLED':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+      case 'OPEN': return 'success';
+      case 'CLOSED': return 'secondary';
+      case 'COMPLETED': return 'default';
+      case 'CANCELLED': return 'destructive';
+      default: return 'secondary';
     }
   };
 
@@ -45,12 +44,7 @@ const Orders = () => {
   };
 
   const handleCancelOrder = (order: OrderWithEvent) => {
-    if (window.confirm('Are you sure you want to cancel this order?')) {
-      cancelOrder({
-        eventId: order.eventId,
-        orderId: order.id,
-      });
-    }
+    setCancellingOrder(order);
   };
 
   if (isLoading) {
@@ -59,11 +53,11 @@ const Orders = () => {
         <h1 className="text-3xl font-bold">My Orders</h1>
         <div className="grid grid-cols-1 gap-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i}>
               <CardContent className="p-6">
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                <Skeleton className="h-6 w-3/4 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
               </CardContent>
             </Card>
           ))}
@@ -102,7 +96,7 @@ const Orders = () => {
                       {order.event?.title || 'Event'}
                     </CardTitle>
                     <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Badge className={getEventStatusColor(order.event?.status || '')}>
+                      <Badge variant={getStatusVariant(order.event?.status || '')}>
                         {order.event?.status}
                       </Badge>
                       <span>•</span>
@@ -218,36 +212,25 @@ const Orders = () => {
         </div>
       )}
 
-      {/* Order Details Modal - Simple version for now */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setSelectedOrder(null)} />
-          <div className="relative z-50 w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Order Details</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedOrder(null)}
-                className="rounded-sm opacity-70 hover:opacity-100"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent onClose={() => setSelectedOrder(null)} className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>
+              Details for your order from {selectedOrder?.event?.restaurant?.name || 'the restaurant'}
+            </DialogDescription>
+          </DialogHeader>
 
+          {selectedOrder && (
             <div className="space-y-4">
               <div>
                 <h3 className="font-medium text-lg">{selectedOrder.event?.title}</h3>
-                <p className="text-sm text-slate-600">
-                  {selectedOrder.event?.restaurant?.name}
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Status:</span>
-                  <Badge className={`ml-2 ${getEventStatusColor(selectedOrder.event?.status || '')}`}>
+                  <Badge className="ml-2" variant={getStatusVariant(selectedOrder.event?.status || '')}>
                     {selectedOrder.event?.status}
                   </Badge>
                 </div>
@@ -293,14 +276,30 @@ const Orders = () => {
                   </div>
                 )}
               </div>
-
-              <Button onClick={() => setSelectedOrder(null)} className="w-full mt-4">
-                Close
-              </Button>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setSelectedOrder(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        isOpen={!!cancellingOrder}
+        onClose={() => setCancellingOrder(null)}
+        onConfirm={() => {
+          if (cancellingOrder) {
+            cancelOrder({ eventId: cancellingOrder.eventId, orderId: cancellingOrder.id });
+            setCancellingOrder(null);
+          }
+        }}
+        title="Cancel Order"
+        message={`Are you sure you want to cancel your order for "${cancellingOrder?.event?.title || 'this event'}"?`}
+        confirmText="Cancel Order"
+        variant="danger"
+        isLoading={isCancelling}
+      />
     </div>
   );
 };

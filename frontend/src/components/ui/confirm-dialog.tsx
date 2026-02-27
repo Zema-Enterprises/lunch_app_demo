@@ -52,13 +52,16 @@ export function ConfirmDialog({
             </div>
             <h2 className="text-xl font-semibold">{title}</h2>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="rounded-sm opacity-70 hover:opacity-100"
             disabled={isLoading}
+            className="rounded-sm opacity-70 hover:opacity-100"
+            aria-label="Close"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         <p className="text-gray-600 mb-6 ml-14">{message}</p>

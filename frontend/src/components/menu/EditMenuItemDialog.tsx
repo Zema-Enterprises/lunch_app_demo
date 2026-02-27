@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useUpdateMenuItem } from '@/lib/api/hooks';
 import { MenuItem } from '@/types';
 import { Edit } from 'lucide-react';
@@ -68,6 +69,7 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
         size="sm"
         variant="outline"
         onClick={() => setIsOpen(true)}
+        aria-label="Edit menu item"
       >
         <Edit className="h-4 w-4" />
       </Button>
@@ -76,11 +78,13 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
         <DialogContent onClose={() => setIsOpen(false)}>
           <DialogHeader>
             <DialogTitle>Edit Menu Item</DialogTitle>
+            <DialogDescription>Update the menu item details below.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name</label>
+              <label htmlFor="editMenuItem-name" className="text-sm font-medium">Name</label>
               <Input
+                id="editMenuItem-name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
@@ -90,8 +94,9 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+              <label htmlFor="editMenuItem-description" className="text-sm font-medium">Description</label>
               <Textarea
+                id="editMenuItem-description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
@@ -102,8 +107,9 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Price ($)</label>
+                <label htmlFor="editMenuItem-price" className="text-sm font-medium">Price ($)</label>
                 <Input
+                  id="editMenuItem-price"
                   name="price"
                   type="number"
                   step="0.01"
@@ -116,8 +122,9 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
+                <label htmlFor="editMenuItem-category" className="text-sm font-medium">Category</label>
                 <Input
+                  id="editMenuItem-category"
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
@@ -128,13 +135,11 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="available"
                 name="available"
                 checked={formData.available}
                 onChange={handleChange}
-                className="w-4 h-4 rounded border-gray-300"
               />
               <label htmlFor="available" className="text-sm font-medium">
                 Available for ordering

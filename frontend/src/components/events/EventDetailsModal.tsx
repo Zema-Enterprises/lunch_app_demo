@@ -39,18 +39,13 @@ export function EventDetailsModal({ event: initialEvent, onClose }: EventDetails
     confirmPayment.mutate({ eventId: event.id, orderId });
   };
   
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'success' | 'secondary' | 'default' | 'destructive' => {
     switch (status) {
-      case 'OPEN':
-        return 'bg-green-500';
-      case 'CLOSED':
-        return 'bg-yellow-500';
-      case 'COMPLETED':
-        return 'bg-blue-500';
-      case 'CANCELLED':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+      case 'OPEN': return 'success';
+      case 'CLOSED': return 'secondary';
+      case 'COMPLETED': return 'default';
+      case 'CANCELLED': return 'destructive';
+      default: return 'secondary';
     }
   };
 
@@ -88,7 +83,7 @@ export function EventDetailsModal({ event: initialEvent, onClose }: EventDetails
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h2 id="event-modal-title" className="text-2xl font-semibold">{event.title}</h2>
-              <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+              <Badge variant={getStatusVariant(event.status)}>{event.status}</Badge>
               {event.deliveredAt && (
                 <Badge className="bg-blue-500 text-white">
                   <Truck className="w-3 h-3 mr-1" />

@@ -388,7 +388,7 @@ export default function CompanySettings() {
                 className={errors.name ? 'border-red-500' : ''}
               />
               {errors.name && (
-                <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                <p role="alert" className="text-sm text-red-500 mt-1">{errors.name}</p>
               )}
             </div>
 
@@ -404,7 +404,7 @@ export default function CompanySettings() {
                 className={errors.domain ? 'border-red-500' : ''}
               />
               {errors.domain && (
-                <p className="text-sm text-red-500 mt-1">{errors.domain}</p>
+                <p role="alert" className="text-sm text-red-500 mt-1">{errors.domain}</p>
               )}
             </div>
 
@@ -519,7 +519,7 @@ export default function CompanySettings() {
                     aria-label="Header fill color"
                   />
                   {themeErrors.backgroundColor && (
-                    <p className="text-sm text-red-500 mt-1">{themeErrors.backgroundColor}</p>
+                    <p role="alert" className="text-sm text-red-500 mt-1">{themeErrors.backgroundColor}</p>
                   )}
                 </div>
 
@@ -537,7 +537,7 @@ export default function CompanySettings() {
                     aria-label="Primary color"
                   />
                   {themeErrors.primaryColor && (
-                    <p className="text-sm text-red-500 mt-1">{themeErrors.primaryColor}</p>
+                    <p role="alert" className="text-sm text-red-500 mt-1">{themeErrors.primaryColor}</p>
                   )}
                 </div>
 
@@ -554,7 +554,7 @@ export default function CompanySettings() {
                     aria-label="Secondary color"
                   />
                   {themeErrors.secondaryColor && (
-                    <p className="text-sm text-red-500 mt-1">{themeErrors.secondaryColor}</p>
+                    <p role="alert" className="text-sm text-red-500 mt-1">{themeErrors.secondaryColor}</p>
                   )}
                 </div>
               </div>
@@ -681,7 +681,7 @@ export default function CompanySettings() {
                 className={inviteErrors.email ? 'border-red-500' : ''}
               />
               {inviteErrors.email && (
-                <p className="text-sm text-red-500 mt-1">{inviteErrors.email}</p>
+                <p role="alert" className="text-sm text-red-500 mt-1">{inviteErrors.email}</p>
               )}
             </div>
             <div>

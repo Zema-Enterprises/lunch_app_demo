@@ -81,7 +81,7 @@ export default function UserProfile() {
               className={errors.name ? 'border-red-500' : ''}
             />
             {errors.name && (
-              <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+              <p role="alert" className="text-sm text-red-500 mt-1">{errors.name}</p>
             )}
           </div>
 
@@ -101,7 +101,7 @@ export default function UserProfile() {
               />
             </div>
             {errors.email && (
-              <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+              <p role="alert" className="text-sm text-red-500 mt-1">{errors.email}</p>
             )}
           </div>
 

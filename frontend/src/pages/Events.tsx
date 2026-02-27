@@ -3,11 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useEvents, useJoinEvent, useCloseEvent, useDeleteEvent, useLeaveEvent } from '@/lib/api/hooks';
 import { useAuthStore } from '@/store/authStore';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, DollarSign, Users, Clock, Trash2, LogOut, Info, Truck } from 'lucide-react';
 import { format } from 'date-fns';
 import { CreateEventDialog } from '@/components/features/CreateEventDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { OrderModal } from '@/components/features/OrderModal';
 import { EditEventDialog } from '@/components/events/EditEventDialog';
 import { EventDetailsModal } from '@/components/events/EventDetailsModal';
@@ -25,21 +27,16 @@ const Events = () => {
   const { data: events = [], isLoading } = useEvents(statusFilter === 'all' ? undefined : statusFilter);
   const { mutate: joinEvent } = useJoinEvent();
   const { mutate: closeEvent } = useCloseEvent();
-  const { mutate: deleteEvent } = useDeleteEvent();
-  const { mutate: leaveEvent } = useLeaveEvent();
+  const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
+  const { mutate: leaveEvent, isPending: isLeaving } = useLeaveEvent();
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'success' | 'secondary' | 'default' | 'destructive' => {
     switch (status) {
-      case 'OPEN':
-        return 'bg-green-500';
-      case 'CLOSED':
-        return 'bg-yellow-500';
-      case 'COMPLETED':
-        return 'bg-blue-500';
-      case 'CANCELLED':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+      case 'OPEN': return 'success';
+      case 'CLOSED': return 'secondary';
+      case 'COMPLETED': return 'default';
+      case 'CANCELLED': return 'destructive';
+      default: return 'secondary';
     }
   };
 
@@ -83,10 +80,10 @@ const Events = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            <Card key={i} className="p-6">
+              <Skeleton className="h-6 w-3/4 mb-4" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-2/3" />
             </Card>
           ))}
         </div>
@@ -161,7 +158,7 @@ const Events = () => {
                     {event.title}
                   </h3>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+                    <Badge variant={getStatusVariant(event.status)}>{event.status}</Badge>
                     {event.deliveredAt && (
                       <Badge className="bg-blue-500 text-white">
                         <Truck className="w-3 h-3 mr-1" />
@@ -289,69 +286,28 @@ const Events = () => {
       )}
 
       {/* Delete Confirmation Dialog */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setDeleteConfirmId(null)}
-          />
-          <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">Delete Event</h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete this event? This action cannot be undone and will remove all associated orders.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirmId(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  deleteEvent(deleteConfirmId);
-                  setDeleteConfirmId(null);
-                }}
-              >
-                Delete Event
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => { deleteEvent(deleteConfirmId!); setDeleteConfirmId(null); }}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This action cannot be undone and will remove all associated orders."
+        confirmText="Delete Event"
+        variant="danger"
+        isLoading={isDeleting}
+      />
 
       {/* Leave Event Confirmation Dialog */}
-      {leaveConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setLeaveConfirmId(null)}
-          />
-          <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">Leave Event</h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to leave this event? Your order will be cancelled if you have placed one.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setLeaveConfirmId(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  leaveEvent(leaveConfirmId);
-                  setLeaveConfirmId(null);
-                }}
-              >
-                Leave Event
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!leaveConfirmId}
+        onClose={() => setLeaveConfirmId(null)}
+        onConfirm={() => { leaveEvent(leaveConfirmId!); setLeaveConfirmId(null); }}
+        title="Leave Event"
+        message="Are you sure you want to leave this event? Your order will be cancelled if you have placed one."
+        confirmText="Leave Event"
+        variant="warning"
+        isLoading={isLeaving}
+      />
     </div>
   );
 };

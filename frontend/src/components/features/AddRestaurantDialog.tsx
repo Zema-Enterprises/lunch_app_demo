@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCreateRestaurant } from '@/lib/api/hooks';
 
 interface AddRestaurantDialogProps {
@@ -54,11 +55,13 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
       <DialogContent onClose={() => onOpenChange(false)}>
         <DialogHeader>
           <DialogTitle>Add Restaurant</DialogTitle>
+          <DialogDescription>Add a new restaurant for your team to order from.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Name</label>
+            <label htmlFor="addRestaurant-name" className="text-sm font-medium">Name</label>
             <Input
+              id="addRestaurant-name"
               name="name"
               value={formData.name}
               onChange={handleChange}
@@ -68,8 +71,9 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Cuisine</label>
+            <label htmlFor="addRestaurant-cuisine" className="text-sm font-medium">Cuisine</label>
             <Input
+              id="addRestaurant-cuisine"
               name="cuisine"
               value={formData.cuisine}
               onChange={handleChange}
@@ -80,8 +84,9 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Open Time</label>
+              <label htmlFor="addRestaurant-openTime" className="text-sm font-medium">Open Time</label>
               <Input
+                id="addRestaurant-openTime"
                 name="openTime"
                 type="time"
                 value={formData.openTime}
@@ -91,8 +96,9 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Close Time</label>
+              <label htmlFor="addRestaurant-closeTime" className="text-sm font-medium">Close Time</label>
               <Input
+                id="addRestaurant-closeTime"
                 name="closeTime"
                 type="time"
                 value={formData.closeTime}
@@ -103,8 +109,9 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Delivery Time</label>
+            <label htmlFor="addRestaurant-deliveryTime" className="text-sm font-medium">Delivery Time</label>
             <Input
+              id="addRestaurant-deliveryTime"
               name="deliveryTime"
               value={formData.deliveryTime}
               onChange={handleChange}
@@ -114,8 +121,9 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Image URL (optional)</label>
+            <label htmlFor="addRestaurant-imageUrl" className="text-sm font-medium">Image URL (optional)</label>
             <Input
+              id="addRestaurant-imageUrl"
               name="imageUrl"
               value={formData.imageUrl}
               onChange={handleChange}
@@ -124,13 +132,11 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
           </div>
 
           <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
               id="hasMenu"
               name="hasMenu"
               checked={formData.hasMenu}
               onChange={handleChange}
-              className="w-4 h-4 rounded border-gray-300"
             />
             <label htmlFor="hasMenu" className="text-sm font-medium">
               Restaurant has a menu

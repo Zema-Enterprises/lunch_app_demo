@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChangePassword } from '@/lib/api/hooks';
-import { X } from 'lucide-react';
 import {
   PASSWORD_COMPLEXITY_REGEX,
   PASSWORD_REQUIREMENTS_MESSAGE,
@@ -19,7 +19,7 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   const changePasswordMutation = useChangePassword();
 
   const validateForm = (): boolean => {
@@ -77,27 +77,13 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="fixed inset-0 bg-black/50"
-        onClick={handleClose}
-      />
-      <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Change Password</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="rounded-sm opacity-70 hover:opacity-100"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent onClose={handleClose}>
+        <DialogHeader>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -113,7 +99,7 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
               className={errors.currentPassword ? 'border-red-500' : ''}
             />
             {errors.currentPassword && (
-              <p className="text-sm text-red-500 mt-1">{errors.currentPassword}</p>
+              <p role="alert" className="text-sm text-red-500 mt-1">{errors.currentPassword}</p>
             )}
           </div>
 
@@ -130,7 +116,7 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
               className={errors.newPassword ? 'border-red-500' : ''}
             />
             {errors.newPassword ? (
-              <p className="text-sm text-red-500 mt-1">{errors.newPassword}</p>
+              <p role="alert" className="text-sm text-red-500 mt-1">{errors.newPassword}</p>
             ) : (
               <p className="text-sm text-gray-500 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
             )}
@@ -149,11 +135,11 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
               className={errors.confirmPassword ? 'border-red-500' : ''}
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
+              <p role="alert" className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
             )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -165,9 +151,9 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
             <Button type="submit" disabled={changePasswordMutation.isPending}>
               {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
