@@ -19,6 +19,9 @@ import {
   updateProfileSchema,
   changePasswordSchema,
   updateCompanySchema,
+  createUserSchema,
+  updateUserSchema,
+  updateUserPasswordSchema,
 } from './users.validation';
 import { authMiddleware } from '../../middleware/auth';
 
@@ -40,10 +43,10 @@ router.get('/company/stats', getCompanyStats);
 
 // User CRUD routes (/:id must come after specific routes)
 router.get('/', listUsers);
-router.post('/', createUser);
+router.post('/', validate(createUserSchema), createUser);
 router.get('/:id', getUser);
-router.put('/:id', updateUser);
+router.put('/:id', validate(updateUserSchema), updateUser);
 router.delete('/:id', deleteUser);
-router.put('/:id/password', updateUserPassword);
+router.put('/:id/password', validate(updateUserPasswordSchema), updateUserPassword);
 
 export default router;

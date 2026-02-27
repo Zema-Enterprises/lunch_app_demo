@@ -15,6 +15,12 @@ import {
   deletePushSubscription,
 } from './push.controller';
 import { getNotificationAnalyticsSummary } from './analytics.controller';
+import { validate } from '../../middleware/validation';
+import {
+  registerPushSubscriptionSchema,
+  deletePushSubscriptionSchema,
+  updateNotificationSettingsSchema,
+} from './notifications.validation';
 
 const router = Router();
 
@@ -28,12 +34,12 @@ router.patch('/:id/read', markNotificationAsRead);
 router.post('/mark-all-read', markAllNotificationsAsRead);
 router.get('/push/public-key', getPushPublicKey);
 router.get('/push-subscriptions', getPushSubscriptions);
-router.post('/push-subscriptions', registerPushSubscription);
-router.delete('/push-subscriptions', deletePushSubscription);
+router.post('/push-subscriptions', validate(registerPushSubscriptionSchema), registerPushSubscription);
+router.delete('/push-subscriptions', validate(deletePushSubscriptionSchema), deletePushSubscription);
 router.get('/analytics/summary', getNotificationAnalyticsSummary);
 
 // Notification settings endpoints
 router.get('/settings', getNotificationSettings);
-router.put('/settings', updateNotificationSettings);
+router.put('/settings', validate(updateNotificationSettingsSchema), updateNotificationSettings);
 
 export default router;
