@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useUserOrders, useCancelOrder } from '../lib/api/hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { ShoppingCart, Calendar, MapPin, DollarSign, Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -225,12 +225,15 @@ const Orders = () => {
           <div className="relative z-50 w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Order Details</h2>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-sm opacity-70 hover:opacity-100"
+                aria-label="Close"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-4">

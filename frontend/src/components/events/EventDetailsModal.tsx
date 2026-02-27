@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, Calendar, MapPin, Clock, DollarSign, Users, ShoppingCart, CheckCircle } from 'lucide-react';
+import { X, Calendar, MapPin, Clock, DollarSign, Users, ShoppingCart, CheckCircle, Check, Truck } from 'lucide-react';
 import { Event } from '@/types';
 import { format } from 'date-fns';
-import { useEvent } from '@/lib/api/hooks';
+import { useEvent, useConfirmPayment } from '@/lib/api/hooks';
 import { useFocusTrap, useEscapeKey } from '@/hooks/useAccessibility';
+import { useAuthStore } from '@/store/authStore';
 
 interface EventDetailsModalProps {
   event: Event;
@@ -14,13 +15,29 @@ interface EventDetailsModalProps {
 export function EventDetailsModal({ event: initialEvent, onClose }: EventDetailsModalProps) {
   // Fetch the full event data with orders
   const { data: fullEvent, isLoading } = useEvent(initialEvent.id);
-  
+  const { user } = useAuthStore();
+  const confirmPayment = useConfirmPayment();
+
   // Use full event data if available, otherwise fall back to initial event
   const event = fullEvent || initialEvent;
-  
+
+  // Check permissions for payment confirmation
+  const isCreator = event.createdById === user?.id;
+  const isAdmin = user?.role === 'ADMIN';
+  const isActiveEvent = event.status !== 'COMPLETED' && event.status !== 'CANCELLED';
+  const canConfirmOrderPayment = (order: { userId: string }) => {
+    if (!isActiveEvent) return false;
+    if (event.paymentMethod === 'EVENT_CREATOR') return isCreator || isAdmin;
+    return order.userId === user?.id; // INDIVIDUAL / COMPANY_EXPENSE: own order only
+  };
+
   // Accessibility hooks
   const modalRef = useFocusTrap(true);
   useEscapeKey(onClose);
+
+  const handleConfirmPayment = (orderId: string) => {
+    confirmPayment.mutate({ eventId: event.id, orderId });
+  };
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -72,18 +89,26 @@ export function EventDetailsModal({ event: initialEvent, onClose }: EventDetails
             <div className="flex items-center gap-3 mb-2">
               <h2 id="event-modal-title" className="text-2xl font-semibold">{event.title}</h2>
               <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+              {event.deliveredAt && (
+                <Badge className="bg-blue-500 text-white">
+                  <Truck className="w-3 h-3 mr-1" />
+                  Delivered
+                </Badge>
+              )}
             </div>
             {event.description && (
               <p className="text-sm text-gray-600">{event.description}</p>
             )}
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
             className="rounded-sm opacity-70 hover:opacity-100 transition-opacity"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-6">
@@ -251,11 +276,29 @@ export function EventDetailsModal({ event: initialEvent, onClose }: EventDetails
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {order.paymentConfirmed && (
+                        {order.paymentConfirmed ? (
                           <Badge className="bg-green-500">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Paid
                           </Badge>
+                        ) : (
+                          <>
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+                              Pending
+                            </Badge>
+                            {canConfirmOrderPayment(order) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleConfirmPayment(order.id)}
+                                disabled={confirmPayment.isPending}
+                                className="h-7 text-green-700 border-green-300 hover:bg-green-50"
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                {confirmPayment.isPending ? 'Confirming...' : 'Confirm Paid'}
+                              </Button>
+                            )}
+                          </>
                         )}
                         <div className="font-semibold text-gray-900">
                           ${order.totalAmount?.toFixed(2) || '0.00'}

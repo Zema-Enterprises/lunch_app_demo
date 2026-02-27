@@ -111,12 +111,15 @@ export function OrderModal({ event, onClose }: OrderModalProps) {
             <h2 className="text-xl font-semibold">{event.title}</h2>
             <p className="text-sm text-gray-600">{event.restaurant?.name}</p>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
             className="rounded-sm opacity-70 hover:opacity-100"
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-6">

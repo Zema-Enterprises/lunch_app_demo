@@ -113,12 +113,15 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
             <h2 id="edit-event-dialog-title" className="text-xl font-semibold">
               Edit Event
             </h2>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleClose}
               className="rounded-sm opacity-70 hover:opacity-100"
+              aria-label="Close"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

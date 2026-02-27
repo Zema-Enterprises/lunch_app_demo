@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { NotificationEvent } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -139,9 +140,10 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
     }
   };
 
-  const title = notification.title || getNotificationTitle(notification.type);
+  const title = getNotificationTitle(notification.type);
   const description =
     notification.body ||
+    notification.title ||
     notification.subject?.eventTitle ||
     notification.event?.title;
 
@@ -176,7 +178,9 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
       </div>
 
       {/* Dismiss Button */}
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={(e) => {
           e.stopPropagation();
           onDismiss();
@@ -185,7 +189,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
         aria-label="Dismiss notification"
       >
         <X className="w-4 h-4" />
-      </button>
+      </Button>
     </div>
   );
 };

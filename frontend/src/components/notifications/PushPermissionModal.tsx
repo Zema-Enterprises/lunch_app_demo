@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bell, X } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 
 interface PushPermissionModalProps {
   isOpen: boolean;
@@ -41,13 +41,15 @@ const PushPermissionModal: React.FC<PushPermissionModalProps> = ({
         aria-describedby="push-modal-description"
       >
         {/* Close button */}
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onDismiss}
           className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
 
         {/* Icon */}
         <div className="flex justify-center mb-4">

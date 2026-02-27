@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import { Input } from '../ui/input';
 import { useChangePassword } from '../../lib/api/hooks';
 import { X } from 'lucide-react';
@@ -88,12 +88,15 @@ export default function ChangePasswordDialog({ isOpen, onClose }: ChangePassword
       <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Change Password</h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleClose}
             className="rounded-sm opacity-70 hover:opacity-100"
+            aria-label="Close"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +24,12 @@ export function CreateEventDialog({ autoOpen = false, onAutoOpenHandled }: Creat
     orderDeadline: '',
     paymentMethod: 'EVENT_CREATOR' as 'EVENT_CREATOR' | 'INDIVIDUAL' | 'COMPANY_EXPENSE',
   });
+  const [deadlineError, setDeadlineError] = useState('');
+  const minDeadline = useMemo(() => {
+    const now = new Date();
+    const tzOffsetMs = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+  }, []);
 
   useEffect(() => {
     if (autoOpen) {
@@ -34,11 +40,19 @@ export function CreateEventDialog({ autoOpen = false, onAutoOpenHandled }: Creat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setDeadlineError('');
+
+    // Validate order deadline is in the future
+    const deadline = new Date(formData.orderDeadline);
+    if (deadline <= new Date()) {
+      setDeadlineError('Order deadline must be in the future');
+      return;
+    }
+
     try {
       await createEvent({
         ...formData,
-        orderDeadline: new Date(formData.orderDeadline).toISOString(),
+        orderDeadline: deadline.toISOString(),
       });
       
       setFormData({
@@ -49,6 +63,7 @@ export function CreateEventDialog({ autoOpen = false, onAutoOpenHandled }: Creat
         orderDeadline: '',
         paymentMethod: 'EVENT_CREATOR',
       });
+      setDeadlineError('');
       setIsOpen(false);
     } catch (error) {
       console.error('Failed to create event:', error);
@@ -81,12 +96,15 @@ export function CreateEventDialog({ autoOpen = false, onAutoOpenHandled }: Creat
               <h2 id="create-event-dialog-title" className="text-xl font-semibold">
                 Create New Event
               </h2>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsOpen(false)}
                 className="rounded-sm opacity-70 hover:opacity-100"
+                aria-label="Close"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -161,9 +179,17 @@ export function CreateEventDialog({ autoOpen = false, onAutoOpenHandled }: Creat
                   id="orderDeadline"
                   type="datetime-local"
                   value={formData.orderDeadline}
-                  onChange={(e) => setFormData({ ...formData, orderDeadline: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, orderDeadline: e.target.value });
+                    setDeadlineError('');
+                  }}
+                  min={minDeadline}
                   required
+                  className={deadlineError ? 'border-red-500' : ''}
                 />
+                {deadlineError && (
+                  <p className="text-sm text-red-500 mt-1">{deadlineError}</p>
+                )}
               </div>
 
               <div>
