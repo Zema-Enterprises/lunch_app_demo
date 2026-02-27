@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notificationStore';
 import {
   useCompany,
@@ -19,7 +18,8 @@ import {
   useUpdateCompanyTheme,
   useUploadThemeCover,
 } from '@/lib/api/hooks';
-import { Building, Users, Calendar, TrendingUp, MailPlus, Palette, Image as ImageIcon, Bell, LogOut, User } from 'lucide-react';
+import { Building, Users, Calendar, TrendingUp, MailPlus, Palette, Image as ImageIcon } from 'lucide-react';
+import { ThemePreview } from '@/components/settings/ThemePreview';
 import { format, formatDistanceToNow } from 'date-fns';
 import { TenantInvite } from '@/types';
 import { DEFAULT_THEME } from '@/theme/constants';
@@ -338,7 +338,7 @@ export default function CompanySettings() {
   const coverActive = useCover && (coverPreview || currentTheme.coverPhotoUrl);
   const previewCoverUrl = coverPreview || currentTheme.coverPhotoUrl;
   const resolvedPreviewCoverUrl = resolveAssetUrl(previewCoverUrl);
-  const previewUsesInvertedTone = coverActive || isColorDark(themeForm.backgroundColor);
+  const previewUsesInvertedTone = !!(coverActive || isColorDark(themeForm.backgroundColor));
   const previewTextColor = previewUsesInvertedTone ? '#f8fafc' : '#0f172a';
   const previewCompanyColor = themeForm.primaryColor;
   const previewNavBackground = previewUsesInvertedTone ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.06)';
@@ -469,122 +469,21 @@ export default function CompanySettings() {
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
             <div className="space-y-4">
-              <div
-                className="rounded-xl border overflow-hidden shadow-sm"
-                data-testid="theme-preview"
-                style={{
-                  backgroundImage: coverActive && resolvedPreviewCoverUrl
-                    ? `linear-gradient(120deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.55) 45%, rgba(15,23,42,0.3) 100%), url(${resolvedPreviewCoverUrl})`
-                    : undefined,
-                  backgroundColor: coverActive ? undefined : themeForm.backgroundColor,
-                  backgroundSize: coverActive ? 'cover' : undefined,
-                  backgroundRepeat: coverActive ? 'no-repeat' : undefined,
-                  backgroundPosition: coverActive ? 'center' : undefined,
-                  height: '72px',
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 24px',
-                  borderColor: previewUsesInvertedTone ? 'rgba(255,255,255,0.18)' : themeForm.primaryColor,
-                }}
-              >
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: coverActive
-                      ? 'linear-gradient(120deg, rgba(15,23,42,0.65) 0%, rgba(15,23,42,0.45) 55%, rgba(15,23,42,0.35) 100%)'
-                      : previewUsesInvertedTone
-                        ? 'linear-gradient(120deg, rgba(15,23,42,0.22) 0%, rgba(15,23,42,0.14) 65%, rgba(15,23,42,0.1) 100%)'
-                        : 'transparent',
-                    backdropFilter: coverActive ? 'blur(4px)' : undefined,
-                  }}
-                />
-                <div className="relative flex items-center gap-3 w-full justify-between">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <span
-                      className="text-2xl font-bold"
-                      style={{ 
-                        color: previewBrandColor,
-                        textShadow: previewUsesInvertedTone 
-                          ? '0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)' 
-                          : '0 1px 3px rgba(0, 0, 0, 0.1)',
-                      }}
-                    >
-                      LunchSync
-                    </span>
-                    {/* Visual separator */}
-                    <div 
-                      className="hidden sm:block w-px h-6"
-                      style={{
-                        backgroundColor: previewUsesInvertedTone 
-                          ? 'rgba(255, 255, 255, 0.3)' 
-                          : 'rgba(15, 23, 42, 0.2)',
-                      }}
-                      aria-hidden="true"
-                    />
-                    {/* Company name badge */}
-                    <div
-                      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full"
-                      style={{
-                        backgroundColor: previewUsesInvertedTone 
-                          ? 'rgba(255, 255, 255, 0.15)' 
-                          : 'rgba(15, 23, 42, 0.06)',
-                        backdropFilter: 'blur(8px)',
-                        border: `1px solid ${previewUsesInvertedTone 
-                          ? 'rgba(255, 255, 255, 0.25)' 
-                          : 'rgba(15, 23, 42, 0.12)'}`,
-                        boxShadow: previewUsesInvertedTone
-                          ? '0 2px 8px rgba(0, 0, 0, 0.15)'
-                          : '0 1px 3px rgba(0, 0, 0, 0.08)',
-                      }}
-                    >
-                      <span
-                        className="text-xs font-medium uppercase tracking-wider"
-                        style={{ 
-                          color: previewUsesInvertedTone ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.6)',
-                          textShadow: previewUsesInvertedTone ? '0 1px 2px rgba(0, 0, 0, 0.2)' : 'none',
-                        }}
-                      >
-                        Company
-                      </span>
-                      <span
-                        className="text-sm font-semibold"
-                        style={{ 
-                          color: previewCompanyColor,
-                          textShadow: previewUsesInvertedTone 
-                            ? '0 1px 3px rgba(0, 0, 0, 0.25)' 
-                            : '0 1px 2px rgba(0, 0, 0, 0.08)',
-                        }}
-                      >
-                        {company?.name || 'Your Company'}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className="flex items-center gap-3 px-4 py-2 rounded-full"
-                    style={{
-                      background: previewNavBackground,
-                      border: previewNavBorder,
-                      backdropFilter: coverActive ? 'blur(8px)' : undefined,
-                    }}
-                  >
-                    <span className="text-sm font-medium flex items-center gap-2" style={{ color: previewTextColor }}>
-                      <User className={cn("w-4 h-4", previewUsesInvertedTone ? "text-slate-200" : "text-slate-500")} />
-                      {user?.name || 'User Name'}
-                    </span>
-                    {user?.role === 'ADMIN' && (
-                      <span
-                        className={cn("px-2 py-1 text-xs rounded-full", previewSecondaryDark ? "text-slate-50" : "text-slate-900")}
-                        style={{ background: themeForm.secondaryColor }}
-                      >
-                        Admin
-                      </span>
-                    )}
-                    <Bell className={cn("w-5 h-5", previewUsesInvertedTone ? "text-slate-50" : "text-slate-900")} />
-                    <LogOut className={cn("w-4 h-4", previewUsesInvertedTone ? "text-slate-50" : "text-slate-900")} />
-                  </div>
-                </div>
-              </div>
+              <ThemePreview
+                themeForm={themeForm}
+                coverActive={!!coverActive}
+                resolvedPreviewCoverUrl={resolvedPreviewCoverUrl}
+                previewUsesInvertedTone={previewUsesInvertedTone}
+                previewBrandColor={previewBrandColor}
+                previewCompanyColor={previewCompanyColor}
+                previewTextColor={previewTextColor}
+                previewNavBackground={previewNavBackground}
+                previewNavBorder={previewNavBorder}
+                previewSecondaryDark={previewSecondaryDark}
+                companyName={company?.name || 'Your Company'}
+                userName={user?.name || 'User Name'}
+                userRole={user?.role || 'USER'}
+              />
               {coverActive ? (
                 <div className="flex items-center gap-3 text-sm text-gray-600">
                   <ImageIcon className="h-4 w-4 text-emerald-600" />
