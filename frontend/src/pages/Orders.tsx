@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useUserOrders, useCancelOrder } from '../lib/api/hooks';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { useUserOrders, useCancelOrder } from '@/lib/api/hooks';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Calendar, MapPin, DollarSign, Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { Order } from '../types';
+import { Order } from '@/types';
 
 interface OrderWithEvent extends Order {
   event?: {

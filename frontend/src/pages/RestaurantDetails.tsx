@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRestaurant, useMenuItems } from '../lib/api/hooks';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { useRestaurant, useMenuItems } from '@/lib/api/hooks';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Clock, MapPin, Utensils, DollarSign, Package } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
-import { EditRestaurantDialog } from '../components/restaurants/EditRestaurantDialog';
-import { MenuItem } from '../types';
+import { useAuthStore } from '@/store/authStore';
+import { EditRestaurantDialog } from '@/components/restaurants/EditRestaurantDialog';
+import { MenuItem } from '@/types';
 import { buildTenantPath } from '@/lib/api/tenant';
 
 const RestaurantDetails = () => {

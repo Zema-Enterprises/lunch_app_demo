@@ -1,16 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEvents, useJoinEvent, useCloseEvent, useDeleteEvent, useLeaveEvent } from '../lib/api/hooks';
-import { useAuthStore } from '../store/authStore';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Calendar, MapPin, DollarSign, Users, Clock, Trash2, LogOut, Info } from 'lucide-react';
+import { useEvents, useJoinEvent, useCloseEvent, useDeleteEvent, useLeaveEvent } from '@/lib/api/hooks';
+import { useAuthStore } from '@/store/authStore';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, MapPin, DollarSign, Users, Clock, Trash2, LogOut, Info, Truck } from 'lucide-react';
 import { format } from 'date-fns';
-import { CreateEventDialog } from '../components/features/CreateEventDialog';
-import { OrderModal } from '../components/features/OrderModal';
-import { EditEventDialog } from '../components/events/EditEventDialog';
-import { EventDetailsModal } from '../components/events/EventDetailsModal';
+import { CreateEventDialog } from '@/components/features/CreateEventDialog';
+import { OrderModal } from '@/components/features/OrderModal';
+import { EditEventDialog } from '@/components/events/EditEventDialog';
+import { EventDetailsModal } from '@/components/events/EventDetailsModal';
 import { buildTenantPath } from '@/lib/api/tenant';
 
 const Events = () => {
@@ -147,11 +147,12 @@ const Events = () => {
             const isParticipant = event.participants?.some((p) => p.userId === user?.id);
             const isCreator = event.createdById === user?.id;
             const isAdmin = user?.role === 'ADMIN';
+            const deadlinePassed = new Date() >= new Date(event.orderDeadline);
             const canEdit = (isCreator || isAdmin) && event.status === 'OPEN';
             const canDelete = isCreator || isAdmin;
-            const canJoin = event.status === 'OPEN' && !isParticipant;
+            const canJoin = event.status === 'OPEN' && !isParticipant && !deadlinePassed;
             const canClose = event.status === 'OPEN' && (isCreator || isAdmin);
-            const canLeave = isParticipant && !isCreator && event.status === 'OPEN';
+            const canLeave = isParticipant && !isCreator && event.status === 'OPEN' && !deadlinePassed;
 
             return (
               <Card key={event.id} className="p-6 hover:shadow-lg transition-shadow">
@@ -161,6 +162,12 @@ const Events = () => {
                   </h3>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+                    {event.deliveredAt && (
+                      <Badge className="bg-blue-500 text-white">
+                        <Truck className="w-3 h-3 mr-1" />
+                        Delivered
+                      </Badge>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -229,7 +236,7 @@ const Events = () => {
                     </Button>
                   )}
                   
-                  {isParticipant && event.status === 'OPEN' && (
+                  {isParticipant && event.status === 'OPEN' && !deadlinePassed && (
                     <Button
                       className="flex-1"
                       variant="outline"

@@ -1,13 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEvent, useJoinEvent, useLeaveEvent, useCloseEvent, useMarkEventDelivered, useCompleteEvent } from '../lib/api/hooks';
-import { useAuthStore } from '../store/authStore';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { useEvent, useJoinEvent, useLeaveEvent, useCloseEvent, useMarkEventDelivered, useCompleteEvent } from '@/lib/api/hooks';
+import { useAuthStore } from '@/store/authStore';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Clock, MapPin, Users, Calendar, User, Truck, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import type { Event, User as UserType } from '../types';
-import OrdersSection from '../components/events/OrdersSection';
+import type { Event, User as UserType } from '@/types';
+import OrdersSection from '@/components/events/OrdersSection';
 import { buildTenantPath } from '@/lib/api/tenant';
 
 interface UserEventState {

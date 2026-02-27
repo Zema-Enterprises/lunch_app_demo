@@ -2,11 +2,11 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuthStore } from '../store/authStore';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
-import { registerSchema, RegisterFormData, PASSWORD_REQUIREMENTS_HINT } from '../lib/validation/schemas';
+import { useAuthStore } from '@/store/authStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { registerSchema, RegisterFormData, PASSWORD_REQUIREMENTS_HINT } from '@/lib/validation/schemas';
 import { buildTenantPath } from '@/lib/api/tenant';
 
 const Register: React.FC = () => {

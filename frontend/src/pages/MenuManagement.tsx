@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRestaurant, useMenuItems, useDeleteMenuItem, useToggleMenuItemAvailability } from '../lib/api/hooks';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
+import { useRestaurant, useMenuItems, useDeleteMenuItem, useToggleMenuItemAvailability } from '@/lib/api/hooks';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft, Trash2, DollarSign, Search } from 'lucide-react';
-import { AddMenuItemDialog } from '../components/menu/AddMenuItemDialog';
-import { EditMenuItemDialog } from '../components/menu/EditMenuItemDialog';
-import { MenuItem } from '../types';
+import { AddMenuItemDialog } from '@/components/menu/AddMenuItemDialog';
+import { EditMenuItemDialog } from '@/components/menu/EditMenuItemDialog';
+import { MenuItem } from '@/types';
 import { buildTenantPath } from '@/lib/api/tenant';
 
 const MenuManagement = () => {

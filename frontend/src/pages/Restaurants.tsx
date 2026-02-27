@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRestaurants, useDeleteRestaurant } from '../lib/api/hooks';
-import { useAuthStore } from '../store/authStore';
-import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import AddRestaurantDialog from '../components/features/AddRestaurantDialog';
-import { EditRestaurantDialog } from '../components/restaurants/EditRestaurantDialog';
-import { SkeletonCardGrid } from '../components/loading/SkeletonLoaders';
-import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { useRestaurants, useDeleteRestaurant } from '@/lib/api/hooks';
+import { useAuthStore } from '@/store/authStore';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import AddRestaurantDialog from '@/components/features/AddRestaurantDialog';
+import { EditRestaurantDialog } from '@/components/restaurants/EditRestaurantDialog';
+import { SkeletonCardGrid } from '@/components/loading/SkeletonLoaders';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Utensils } from 'lucide-react';
-import type { Restaurant } from '../types';
+import type { Restaurant } from '@/types';
 
 export default function Restaurants() {
   const navigate = useNavigate();

@@ -1,15 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Calendar, UtensilsCrossed, Users, Plus, Clock, ShoppingBag, TrendingUp, ArrowRight, DollarSign } from 'lucide-react';
-import { useEvents, useRestaurants, useUserStats, useNotificationAnalytics } from '../lib/api/hooks';
+import { useEvents, useRestaurants, useUserStats, useNotificationAnalytics } from '@/lib/api/hooks';
 import { format } from 'date-fns';
-import { SkeletonStats, SkeletonList } from '../components/loading/SkeletonLoaders';
-import { EmptyState } from '../components/ui/empty-state';
+import { SkeletonStats, SkeletonList } from '@/components/loading/SkeletonLoaders';
+import { EmptyState } from '@/components/ui/empty-state';
 import NotificationAnalyticsPanel from '@/components/notifications/NotificationAnalyticsPanel';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '@/store/authStore';
 import { buildTenantPath } from '@/lib/api/tenant';
 
 const Dashboard: React.FC = () => {
