@@ -65,8 +65,8 @@ export function CreateEventDialog({ autoOpen = false, onAutoOpenHandled }: Creat
       });
       setDeadlineError('');
       setIsOpen(false);
-    } catch (error) {
-      console.error('Failed to create event:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

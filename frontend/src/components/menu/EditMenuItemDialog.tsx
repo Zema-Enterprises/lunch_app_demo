@@ -57,8 +57,8 @@ export function EditMenuItemDialog({ restaurantId, menuItem }: EditMenuItemDialo
         },
       });
       setIsOpen(false);
-    } catch (error) {
-      console.error('Failed to update menu item:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

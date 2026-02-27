@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEvent, useJoinEvent, useLeaveEvent, useCloseEvent } from '../lib/api/hooks';
+import { useEvent, useJoinEvent, useLeaveEvent, useCloseEvent, useMarkEventDelivered, useCompleteEvent } from '../lib/api/hooks';
 import { useAuthStore } from '../store/authStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { ArrowLeft, Clock, MapPin, Users, Calendar, User } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Users, Calendar, User, Truck, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Event, User as UserType } from '../types';
 import OrdersSection from '../components/events/OrdersSection';
@@ -17,6 +17,8 @@ interface UserEventState {
   canJoin: boolean;
   canLeave: boolean;
   canCloseEvent: boolean;
+  canMarkDelivered: boolean;
+  canCompleteEvent: boolean;
 }
 
 const getUserEventState = (user: UserType | null, event: Event | undefined): UserEventState => {
@@ -28,6 +30,8 @@ const getUserEventState = (user: UserType | null, event: Event | undefined): Use
       canJoin: false,
       canLeave: false,
       canCloseEvent: false,
+      canMarkDelivered: false,
+      canCompleteEvent: false,
     };
   }
 
@@ -35,14 +39,21 @@ const getUserEventState = (user: UserType | null, event: Event | undefined): Use
   const isCreator = event.createdById === user.id;
   const isAdmin = user.role === 'ADMIN';
   const isOpen = event.status === 'OPEN';
+  const isClosed = event.status === 'CLOSED';
+  const hasManagerAccess = isCreator || isAdmin;
+  const deadlinePassed = new Date() >= new Date(event.orderDeadline);
 
   return {
     isParticipant,
     isCreator,
     isAdmin,
-    canJoin: !isParticipant && isOpen,
-    canLeave: isParticipant && !isCreator && isOpen,
-    canCloseEvent: (isCreator || isAdmin) && isOpen,
+    canJoin: !isParticipant && isOpen && !deadlinePassed,
+    canLeave: isParticipant && !isCreator && isOpen && !deadlinePassed,
+    canCloseEvent: hasManagerAccess && isOpen,
+    // Can mark delivered when event is CLOSED and not yet delivered
+    canMarkDelivered: hasManagerAccess && isClosed && !event.deliveredAt,
+    // Can complete event when event is CLOSED (completion will check all requirements)
+    canCompleteEvent: hasManagerAccess && isClosed,
   };
 };
 
@@ -54,6 +65,8 @@ const EventDetail = () => {
   const joinEvent = useJoinEvent();
   const leaveEvent = useLeaveEvent();
   const closeEvent = useCloseEvent();
+  const markDelivered = useMarkEventDelivered();
+  const completeEvent = useCompleteEvent();
 
   const userState = getUserEventState(user, event);
 
@@ -61,8 +74,8 @@ const EventDetail = () => {
     if (!id) return;
     try {
       await joinEvent.mutateAsync(id);
-    } catch (error) {
-      console.error('Failed to join event:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 
@@ -71,8 +84,8 @@ const EventDetail = () => {
     if (!confirm('Are you sure you want to leave this event?')) return;
     try {
       await leaveEvent.mutateAsync(id);
-    } catch (error) {
-      console.error('Failed to leave event:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 
@@ -81,8 +94,26 @@ const EventDetail = () => {
     if (!confirm('Are you sure you want to close this event? No more orders will be accepted.')) return;
     try {
       await closeEvent.mutateAsync(id);
-    } catch (error) {
-      console.error('Failed to close event:', error);
+    } catch {
+      // Error handled by TanStack Query
+    }
+  };
+
+  const handleMarkDelivered = async () => {
+    if (!id) return;
+    try {
+      await markDelivered.mutateAsync(id);
+    } catch {
+      // Error handled by TanStack Query
+    }
+  };
+
+  const handleCompleteEvent = async () => {
+    if (!id) return;
+    try {
+      await completeEvent.mutateAsync(id);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 
@@ -113,18 +144,18 @@ const EventDetail = () => {
     );
   }
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'OPEN':
-        return 'default';
+        return 'bg-green-500 text-white';
       case 'CLOSED':
-        return 'secondary';
+        return 'bg-yellow-500 text-white';
       case 'COMPLETED':
-        return 'success';
+        return 'bg-blue-500 text-white';
       case 'CANCELLED':
-        return 'destructive';
+        return 'bg-red-500 text-white';
       default:
-        return 'default';
+        return 'bg-gray-500 text-white';
     }
   };
 
@@ -140,9 +171,15 @@ const EventDetail = () => {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold">{event.title}</h1>
-              <Badge variant={getStatusBadgeVariant(event.status)}>
+              <Badge className={getStatusBadgeColor(event.status)}>
                 {event.status}
               </Badge>
+              {event.deliveredAt && (
+                <Badge className="bg-blue-500 text-white">
+                  <Truck className="w-3 h-3 mr-1" />
+                  Delivered
+                </Badge>
+              )}
             </div>
             {event.description && (
               <p className="text-gray-600 mt-2">{event.description}</p>
@@ -152,7 +189,7 @@ const EventDetail = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         {userState.canJoin && (
           <Button onClick={handleJoinEvent} disabled={joinEvent.isPending}>
             {joinEvent.isPending ? 'Joining...' : 'Join Event'}
@@ -166,6 +203,27 @@ const EventDetail = () => {
         {userState.canCloseEvent && (
           <Button variant="destructive" onClick={handleCloseEvent} disabled={closeEvent.isPending}>
             {closeEvent.isPending ? 'Closing...' : 'Close Event'}
+          </Button>
+        )}
+        {userState.canMarkDelivered && (
+          <Button
+            variant="outline"
+            onClick={handleMarkDelivered}
+            disabled={markDelivered.isPending}
+            className="text-blue-700 border-blue-300 hover:bg-blue-50"
+          >
+            <Truck className="w-4 h-4 mr-2" />
+            {markDelivered.isPending ? 'Marking...' : 'Mark Delivered'}
+          </Button>
+        )}
+        {userState.canCompleteEvent && (
+          <Button
+            onClick={handleCompleteEvent}
+            disabled={completeEvent.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle className="w-4 h-4 mr-2" />
+            {completeEvent.isPending ? 'Completing...' : 'Complete Event'}
           </Button>
         )}
       </div>

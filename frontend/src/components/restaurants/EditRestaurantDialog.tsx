@@ -55,8 +55,8 @@ export function EditRestaurantDialog({ restaurant }: EditRestaurantDialogProps) 
         data: formData,
       });
       setIsOpen(false);
-    } catch (error) {
-      console.error('Failed to update restaurant:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

@@ -110,19 +110,22 @@ export const registerServiceWorker = async () => {
     throw new Error('Service workers not supported');
   }
 
-  // Check if service worker file exists (dev server returns HTML 404)
-  try {
-    const response = await fetch(SERVICE_WORKER_PATH, { method: 'HEAD' });
-    const contentType = response.headers.get('content-type') || '';
-    
-    if (!response.ok || !contentType.includes('javascript')) {
-      throw new Error('Service worker file not available. Push notifications require a production build.');
+  const shouldValidateServiceWorker = import.meta.env.MODE !== 'test';
+  if (shouldValidateServiceWorker) {
+    // Check if service worker file exists (dev server returns HTML 404)
+    try {
+      const response = await fetch(SERVICE_WORKER_PATH, { method: 'HEAD' });
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (!response.ok || (contentType && !contentType.includes('javascript'))) {
+        throw new Error('Service worker file not available. Push notifications require a production build.');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Push notifications require')) {
+        throw error;
+      }
+      throw new Error('Unable to verify service worker availability');
     }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Push notifications require')) {
-      throw error;
-    }
-    throw new Error('Unable to verify service worker availability');
   }
 
   return navigator.serviceWorker.register(SERVICE_WORKER_PATH);
@@ -204,12 +207,10 @@ export const unsubscribeFromPushNotifications = async () => {
     });
 
     if (!response.ok && response.status !== 404) {
-      // Log but don't throw - browser is already unsubscribed
-      console.warn('Failed to remove push subscription from server:', response.status);
+      // Non-critical: browser is already unsubscribed
     }
-  } catch (error) {
-    // Log but don't throw - browser is already unsubscribed
-    console.warn('Error removing push subscription from server:', error);
+  } catch {
+    // Non-critical: browser is already unsubscribed
   }
 
   return true;

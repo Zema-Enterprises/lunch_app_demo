@@ -27,8 +27,8 @@ export default function Restaurants() {
     try {
       await deleteRestaurant.mutateAsync(deletingRestaurant.id);
       setDeletingRestaurant(null);
-    } catch (error) {
-      console.error('Failed to delete restaurant:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

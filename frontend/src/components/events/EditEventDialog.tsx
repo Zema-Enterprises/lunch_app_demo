@@ -58,8 +58,8 @@ export function EditEventDialog({ event, onClose }: EditEventDialogProps) {
       
       setIsOpen(false);
       onClose?.();
-    } catch (error) {
-      console.error('Failed to update event:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

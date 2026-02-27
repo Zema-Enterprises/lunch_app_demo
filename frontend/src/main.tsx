@@ -23,6 +23,7 @@ const bootstrapServiceWorker = () => {
         .register('/service-worker.js')
         .catch((error) => {
           if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
             console.warn('Service worker registration failed', error);
           }
         });

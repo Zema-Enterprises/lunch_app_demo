@@ -44,8 +44,8 @@ const AddRestaurantDialog: React.FC<AddRestaurantDialogProps> = ({ open, onOpenC
         hasMenu: false,
         imageUrl: '',
       });
-    } catch (error) {
-      console.error('Failed to create restaurant:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

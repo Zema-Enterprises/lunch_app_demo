@@ -89,8 +89,8 @@ export function OrderModal({ event, onClose }: OrderModalProps) {
         });
       }
       onClose();
-    } catch (error) {
-      console.error('Failed to create order:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 

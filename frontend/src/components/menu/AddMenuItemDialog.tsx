@@ -51,8 +51,8 @@ export function AddMenuItemDialog({ restaurantId }: AddMenuItemDialogProps) {
         available: true,
       });
       setIsOpen(false);
-    } catch (error) {
-      console.error('Failed to create menu item:', error);
+    } catch {
+      // Error handled by TanStack Query
     }
   };
 
