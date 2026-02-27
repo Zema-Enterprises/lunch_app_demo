@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middleware/auth';
+import { logger } from '../../utils/logger';
 import { sanitize } from '../../utils/sanitize';
 import { createNotificationEvent, createNotificationEvents } from '../notifications/notification.service';
 
@@ -46,7 +47,7 @@ export const getEvents = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: events });
   } catch (error) {
-    console.error('Get events error:', error);
+    logger.error('Get events error:', error);
     return res.status(500).json({ message: 'Failed to fetch events' });
   }
 };
@@ -114,7 +115,7 @@ export const getEvent = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: event });
   } catch (error) {
-    console.error('Get event error:', error);
+    logger.error('Get event error:', error);
     return res.status(500).json({ message: 'Failed to fetch event' });
   }
 };
@@ -196,7 +197,7 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json({ data: event });
   } catch (error) {
-    console.error('Create event error:', error);
+    logger.error('Create event error:', error);
     return res.status(500).json({ message: 'Failed to create event' });
   }
 };
@@ -299,7 +300,7 @@ export const updateEvent = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: event });
   } catch (error) {
-    console.error('Update event error:', error);
+    logger.error('Update event error:', error);
     return res.status(500).json({ message: 'Failed to update event' });
   }
 };
@@ -342,7 +343,7 @@ export const deleteEvent = async (req: AuthRequest, res: Response) => {
 
     return res.json({ message: 'Event deleted successfully' });
   } catch (error) {
-    console.error('Delete event error:', error);
+    logger.error('Delete event error:', error);
     return res.status(500).json({ message: 'Failed to delete event' });
   }
 };
@@ -404,7 +405,7 @@ export const closeEvent = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: event });
   } catch (error) {
-    console.error('Close event error:', error);
+    logger.error('Close event error:', error);
     return res.status(500).json({ message: 'Failed to close event' });
   }
 };
@@ -431,6 +432,11 @@ export const joinEvent = async (req: AuthRequest, res: Response) => {
     // Check if event is open
     if (event.status !== 'OPEN') {
       return res.status(403).json({ message: 'Cannot join closed event' });
+    }
+
+    // Check if order deadline has passed
+    if (new Date() >= new Date(event.orderDeadline)) {
+      return res.status(400).json({ message: 'Order deadline has passed' });
     }
 
     // Check if already participant
@@ -495,7 +501,7 @@ export const joinEvent = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json({ data: participant });
   } catch (error) {
-    console.error('Join event error:', error);
+    logger.error('Join event error:', error);
     return res.status(500).json({ message: 'Failed to join event' });
   }
 };
@@ -572,7 +578,7 @@ export const leaveEvent = async (req: AuthRequest, res: Response) => {
       data: { message: 'Successfully left event' } 
     });
   } catch (error) {
-    console.error('Leave event error:', error);
+    logger.error('Leave event error:', error);
     return res.status(500).json({ message: 'Failed to leave event' });
   }
 };
@@ -618,7 +624,7 @@ export const getEventOrders = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: orders });
   } catch (error) {
-    console.error('Get event orders error:', error);
+    logger.error('Get event orders error:', error);
     return res.status(500).json({ message: 'Failed to fetch orders' });
   }
 };
@@ -694,7 +700,7 @@ export const checkCompletion = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Check completion error:', error);
+    logger.error('Check completion error:', error);
     return res.status(500).json({ message: 'Failed to check completion' });
   }
 };

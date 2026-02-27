@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middleware/auth';
+import { logger } from '../../utils/logger';
 import { createNotificationEvent } from '../notifications/notification.service';
 
 export const getEventOrders = async (req: AuthRequest, res: Response) => {
@@ -44,7 +45,7 @@ export const getEventOrders = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: orders });
   } catch (error) {
-    console.error('Get event orders error:', error);
+    logger.error('Get event orders error:', error);
     return res.status(500).json({ message: 'Failed to fetch orders' });
   }
 };
@@ -222,7 +223,7 @@ export const createOrUpdateOrder = async (req: AuthRequest, res: Response) => {
 
     return res.status(existingOrder ? 200 : 201).json({ data: order });
   } catch (error) {
-    console.error('Create/update order error:', error);
+    logger.error('Create/update order error:', error);
     return res.status(500).json({ message: 'Failed to create/update order' });
   }
 };
@@ -262,7 +263,7 @@ export const deleteOrder = async (req: AuthRequest, res: Response) => {
 
     return res.json({ message: 'Order deleted successfully' });
   } catch (error) {
-    console.error('Delete order error:', error);
+    logger.error('Delete order error:', error);
     return res.status(500).json({ message: 'Failed to delete order' });
   }
 };
@@ -327,7 +328,7 @@ export const confirmPayment = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: updated });
   } catch (error) {
-    console.error('Confirm payment error:', error);
+    logger.error('Confirm payment error:', error);
     return res.status(500).json({ message: 'Failed to confirm payment' });
   }
 };
@@ -372,7 +373,7 @@ export const getUserOrders = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: orders });
   } catch (error) {
-    console.error('Get user orders error:', error);
+    logger.error('Get user orders error:', error);
     res.status(500).json({ message: 'Failed to fetch orders' });
   }
 };
