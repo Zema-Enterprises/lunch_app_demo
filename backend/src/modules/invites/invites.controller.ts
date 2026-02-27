@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../../middleware/auth';
+import { logger } from '../../utils/logger';
 import {
   createTenantInvite,
   InviteServiceError,
@@ -41,7 +42,7 @@ export const createInvite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    console.error('Create invite error:', error);
+    logger.error('Create invite error:', error);
     return res.status(500).json({ error: 'INVITE_CREATION_FAILED' });
   }
 };
@@ -54,7 +55,7 @@ export const listInvites = async (req: AuthRequest, res: Response) => {
       data: invites.map(presentInvite),
     });
   } catch (error) {
-    console.error('List invites error:', error);
+    logger.error('List invites error:', error);
     return res.status(500).json({ error: 'INVITE_LIST_FAILED' });
   }
 };
@@ -106,7 +107,7 @@ export const redeemInvite = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Redeem invite error:', error);
+    logger.error('Redeem invite error:', error);
     return res.status(500).json({
       error: 'INVITE_REDEMPTION_FAILED',
       message: 'Failed to redeem invite',

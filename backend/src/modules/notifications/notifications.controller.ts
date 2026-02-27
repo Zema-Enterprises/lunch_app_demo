@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middleware/auth';
+import { logger } from '../../utils/logger';
 
 const mapNotificationResponse = (notification: any) => {
   const meta = (notification.meta as any) || {};
@@ -75,7 +76,7 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: notifications.map(mapNotificationResponse) });
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    logger.error('Error fetching notifications:', error);
     res.status(500).json({ message: 'Failed to fetch notifications' });
   }
 };
@@ -108,7 +109,7 @@ export const getNotificationStats = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching notification stats:', error);
+    logger.error('Error fetching notification stats:', error);
     res.status(500).json({ message: 'Failed to fetch notification stats' });
   }
 };
@@ -140,7 +141,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
 
     res.json({ data: { success: true } });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    logger.error('Error marking notification as read:', error);
     res.status(500).json({ message: 'Failed to mark notification as read' });
   }
 };
@@ -164,7 +165,7 @@ export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response
 
     res.json({ data: { success: true } });
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    logger.error('Error marking all notifications as read:', error);
     res.status(500).json({ message: 'Failed to mark all notifications as read' });
   }
 };
@@ -205,7 +206,7 @@ export const getNotificationSettings = async (req: AuthRequest, res: Response) =
       },
     });
   } catch (error) {
-    console.error('Error fetching notification settings:', error);
+    logger.error('Error fetching notification settings:', error);
     res.status(500).json({ message: 'Failed to fetch notification settings' });
   }
 };
@@ -252,7 +253,7 @@ export const updateNotificationSettings = async (req: AuthRequest, res: Response
       },
     });
   } catch (error) {
-    console.error('Error updating notification settings:', error);
+    logger.error('Error updating notification settings:', error);
     res.status(500).json({ message: 'Failed to update notification settings' });
   }
 };

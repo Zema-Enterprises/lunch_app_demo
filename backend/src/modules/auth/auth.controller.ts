@@ -4,6 +4,7 @@ import { hashPassword, comparePassword } from '../../utils/bcrypt';
 import { generateToken } from '../../utils/jwt';
 import { AuthRequest } from '../../middleware/auth';
 import { isPasswordStrong, PASSWORD_REQUIREMENTS_MESSAGE } from '../../utils/password';
+import { logger } from '../../utils/logger';
 import {
   issueRefreshToken,
   rotateRefreshToken,
@@ -124,7 +125,7 @@ export const register = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     return res.status(500).json({ message: 'Registration failed' });
   }
 };
@@ -184,7 +185,7 @@ export const login = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     return res.status(500).json({ message: 'Login failed' });
   }
 };
@@ -216,7 +217,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get current user error:', error);
+    logger.error('Get current user error:', error);
     return res.status(500).json({ message: 'Failed to get user' });
   }
 };
@@ -281,7 +282,7 @@ export const refreshAccessToken = async (req: AuthRequest, res: Response) => {
       clearRefreshTokenCookie(res);
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
-    console.error('Refresh token error:', error);
+    logger.error('Refresh token error:', error);
     return res.status(500).json({ message: 'Failed to refresh session' });
   }
 };

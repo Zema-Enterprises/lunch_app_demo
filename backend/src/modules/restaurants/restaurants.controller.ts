@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middleware/auth';
 import { sanitize } from '../../utils/sanitize';
+import { logger } from '../../utils/logger';
 
 export const getRestaurants = async (req: AuthRequest, res: Response) => {
   try {
@@ -19,7 +20,7 @@ export const getRestaurants = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: restaurants });
   } catch (error) {
-    console.error('Get restaurants error:', error);
+    logger.error('Get restaurants error:', error);
     return res.status(500).json({ message: 'Failed to fetch restaurants' });
   }
 };
@@ -46,7 +47,7 @@ export const getRestaurant = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: restaurant });
   } catch (error) {
-    console.error('Get restaurant error:', error);
+    logger.error('Get restaurant error:', error);
     return res.status(500).json({ message: 'Failed to fetch restaurant' });
   }
 };
@@ -72,7 +73,7 @@ export const createRestaurant = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json({ data: restaurant });
   } catch (error) {
-    console.error('Create restaurant error:', error);
+    logger.error('Create restaurant error:', error);
     return res.status(500).json({ message: 'Failed to create restaurant' });
   }
 };
@@ -111,7 +112,7 @@ export const updateRestaurant = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: restaurant });
   } catch (error) {
-    console.error('Update restaurant error:', error);
+    logger.error('Update restaurant error:', error);
     return res.status(500).json({ message: 'Failed to update restaurant' });
   }
 };
@@ -138,7 +139,7 @@ export const deleteRestaurant = async (req: AuthRequest, res: Response) => {
 
     return res.status(204).send();
   } catch (error) {
-    console.error('Delete restaurant error:', error);
+    logger.error('Delete restaurant error:', error);
     return res.status(500).json({ message: 'Failed to delete restaurant' });
   }
 };
@@ -173,7 +174,7 @@ export const getMenuItems = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: menuItems });
   } catch (error) {
-    console.error('Get menu items error:', error);
+    logger.error('Get menu items error:', error);
     return res.status(500).json({ message: 'Failed to fetch menu items' });
   }
 };
@@ -208,7 +209,7 @@ export const createMenuItem = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json({ data: menuItem });
   } catch (error) {
-    console.error('Create menu item error:', error);
+    logger.error('Create menu item error:', error);
     return res.status(500).json({ message: 'Failed to create menu item' });
   }
 };
@@ -239,7 +240,7 @@ export const updateMenuItem = async (req: AuthRequest, res: Response) => {
 
     return res.json({ data: updated });
   } catch (error) {
-    console.error('Update menu item error:', error);
+    logger.error('Update menu item error:', error);
     return res.status(500).json({ message: 'Failed to update menu item' });
   }
 };
@@ -269,7 +270,7 @@ export const deleteMenuItem = async (req: AuthRequest, res: Response) => {
 
     return res.status(204).send();
   } catch (error) {
-    console.error('Delete menu item error:', error);
+    logger.error('Delete menu item error:', error);
     return res.status(500).json({ message: 'Failed to delete menu item' });
   }
 };

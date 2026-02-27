@@ -4,6 +4,7 @@ import prisma from '../../config/database';
 import { env } from '../../config/env';
 import { sendInviteEmail } from './invite.mailer';
 import { hashPassword } from '../../utils/bcrypt';
+import { logger } from '../../utils/logger';
 
 export type InviteStatus = 'PENDING' | 'REDEEMED' | 'REVOKED' | 'EXPIRED';
 
@@ -145,7 +146,7 @@ export const createTenantInvite = async (params: CreateInviteParams) => {
       inviterName: inviter.name || inviter.email,
     });
   } catch (error) {
-    console.error('Failed to deliver invite email', error);
+    logger.error('Failed to deliver invite email', error);
     await prisma.tenantInvite.delete({ where: { id: invite.id } });
     throw new InviteServiceError(
       'INVITE_DELIVERY_FAILED',

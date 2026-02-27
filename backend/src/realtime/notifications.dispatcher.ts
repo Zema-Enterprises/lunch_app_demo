@@ -1,6 +1,7 @@
 import { NotificationEvent, Event, Order, User } from '@prisma/client';
 import { emitRealtimeNotification } from './notifications.registry';
 import { NOTIFICATION_CREATED_EVENT } from './constants';
+import { logger } from '../utils/logger';
 
 type NotificationRelations = {
   user?: Pick<User, 'id' | 'companyId' | 'name' | 'email'> | null;
@@ -85,13 +86,13 @@ const buildBroadcastPayload = (notification: NotificationWithRelations) => {
 export const broadcastNotificationCreated = (notification: NotificationWithRelations) => {
   const companyId = notification.user?.companyId;
   if (!companyId) {
-    console.log('[Socket.IO] No companyId for notification:', notification.id);
+    logger.info('[Socket.IO] No companyId for notification:', notification.id);
     return;
   }
 
   const payload = buildBroadcastPayload(notification);
 
-  console.log('[Socket.IO] Emitting notification:', {
+  logger.info('[Socket.IO] Emitting notification:', {
     notificationId: notification.id,
     type: notification.type,
     userId: notification.userId,

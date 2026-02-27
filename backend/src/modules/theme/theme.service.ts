@@ -4,6 +4,7 @@ import os from 'os';
 import sharp from 'sharp';
 import prisma from '../../config/database';
 import { CompanyTheme } from '@prisma/client';
+import { logger } from '../../utils/logger';
 
 export const DEFAULT_THEME = {
   primaryColor: '#0f172a',
@@ -99,7 +100,7 @@ async function ensureUploadDirectory(tenantKey: string) {
     await fs.mkdir(directory, { recursive: true });
     return directory;
   } catch (error: any) {
-    console.error('Failed to create theme upload directory, falling back to temp:', error?.message);
+    logger.error('Failed to create theme upload directory, falling back to temp:', error?.message);
     const fallback = path.join(os.tmpdir(), 'themes', tenantKey);
     await fs.mkdir(fallback, { recursive: true });
     return fallback;
@@ -114,7 +115,7 @@ const clearExistingCovers = async (directory: string) => {
       .map((entry) => fs.rm(path.join(directory, entry.name), { force: true }));
     await Promise.all(removals);
   } catch (error) {
-    console.warn('Failed to clear previous cover photos:', (error as Error)?.message);
+    logger.warn('Failed to clear previous cover photos:', (error as Error)?.message);
   }
 };
 

@@ -11,6 +11,7 @@ import {
 } from './constants';
 import { buildRedisConfig } from './redis-config';
 import { verifyToken } from '../utils/jwt';
+import { logger as appLogger } from '../utils/logger';
 import { recordRealtimeConnection, recordRealtimeDelivery } from '../telemetry/notifications.telemetry';
 
 interface SocketLike {
@@ -108,7 +109,7 @@ export const createNotificationsServer = async ({
       const handshake = buildHandshakePayload(user, handshakeOverrides);
       const rooms = deriveRoomNames(user);
 
-      console.log('[Socket.IO] User connecting, joining rooms:', {
+      appLogger.info('[Socket.IO] User connecting, joining rooms:', {
         userId: user.id,
         companyId: user.companyId,
         rooms: [rooms.companyRoom, rooms.userRoom],
@@ -170,7 +171,7 @@ export const createNotificationsServer = async ({
       // This prevents duplicate delivery since user is already in company room
       if (options?.userId) {
         const targetRoom = `user:${options.userId}`;
-        console.log('[Socket.IO Gateway] Emitting to user room:', {
+        appLogger.info('[Socket.IO Gateway] Emitting to user room:', {
           targetRoom,
           eventName,
           notificationId,
@@ -188,7 +189,7 @@ export const createNotificationsServer = async ({
       } else {
         // Broadcast to entire company if no specific user targeted
         const targetRoom = `company:${companyId}`;
-        console.log('[Socket.IO Gateway] Emitting to company room:', {
+        appLogger.info('[Socket.IO Gateway] Emitting to company room:', {
           targetRoom,
           eventName,
           notificationId,

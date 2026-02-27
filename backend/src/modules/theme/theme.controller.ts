@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/auth';
+import { logger } from '../../utils/logger';
 import {
   ThemeError,
   getOrCreateTheme,
@@ -16,7 +17,7 @@ export const getCompanyTheme = async (req: AuthRequest, res: Response) => {
     const theme = await getOrCreateTheme(companyId);
     return res.json({ data: toThemeResponse(theme) });
   } catch (error) {
-    console.error('Get theme error:', error);
+    logger.error('Get theme error:', error);
     return res.status(500).json({ message: 'Failed to fetch theme' });
   }
 };
@@ -28,7 +29,7 @@ export const updateCompanyTheme = async (req: AuthRequest, res: Response) => {
     const theme = await updateThemeColors(companyId, req.body);
     return res.json({ data: toThemeResponse(theme) });
   } catch (error) {
-    console.error('Update theme error:', error);
+    logger.error('Update theme error:', error);
     return res.status(500).json({ message: 'Failed to update theme' });
   }
 };
@@ -48,7 +49,7 @@ export const uploadThemeCover = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: error.message });
     }
 
-    console.error('Upload theme cover error:', error);
+    logger.error('Upload theme cover error:', error);
     return res.status(500).json({ message: 'Failed to upload cover photo' });
   }
 };

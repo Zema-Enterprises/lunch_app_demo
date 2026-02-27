@@ -3,6 +3,7 @@ import prisma from '../../config/database';
 import { hashPassword, comparePassword } from '../../utils/bcrypt';
 import { AuthRequest } from '../../middleware/auth';
 import { isPasswordStrong, PASSWORD_REQUIREMENTS_MESSAGE } from '../../utils/password';
+import { logger } from '../../utils/logger';
 
 // Get user by ID
 export const getUser = async (req: AuthRequest, res: Response) => {
@@ -33,7 +34,7 @@ export const getUser = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: user });
   } catch (error) {
-    console.error('Get user error:', error);
+    logger.error('Get user error:', error);
     res.status(500).json({ message: 'Failed to fetch user' });
   }
 };
@@ -91,7 +92,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: updatedUser });
   } catch (error) {
-    console.error('Update user error:', error);
+    logger.error('Update user error:', error);
     res.status(500).json({ message: 'Failed to update user' });
   }
 };
@@ -126,7 +127,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
 
     res.status(204).send();
   } catch (error) {
-    console.error('Delete user error:', error);
+    logger.error('Delete user error:', error);
     res.status(500).json({ message: 'Failed to delete user' });
   }
 };
@@ -181,7 +182,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json({ data: newUser });
   } catch (error) {
-    console.error('Create user error:', error);
+    logger.error('Create user error:', error);
     res.status(500).json({ message: 'Failed to create user' });
   }
 };
@@ -213,7 +214,7 @@ export const listUsers = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: users });
   } catch (error) {
-    console.error('List users error:', error);
+    logger.error('List users error:', error);
     res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
@@ -261,7 +262,7 @@ export const updateUserPassword = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Update password error:', error);
+    logger.error('Update password error:', error);
     res.status(500).json({ message: 'Failed to update password' });
   }
 };
@@ -299,7 +300,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: updatedUser });
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error:', error);
     res.status(500).json({ message: 'Failed to update profile' });
   }
 };
@@ -340,7 +341,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error:', error);
     res.status(500).json({ message: 'Failed to change password' });
   }
 };
@@ -370,7 +371,7 @@ export const getCompanyUsers = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: users });
   } catch (error) {
-    console.error('Get company users error:', error);
+    logger.error('Get company users error:', error);
     res.status(500).json({ message: 'Failed to fetch company users' });
   }
 };
@@ -395,7 +396,7 @@ export const updateCompany = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: updatedCompany });
   } catch (error) {
-    console.error('Update company error:', error);
+    logger.error('Update company error:', error);
     res.status(500).json({ message: 'Failed to update company' });
   }
 };
@@ -421,7 +422,7 @@ export const getCompany = async (req: AuthRequest, res: Response) => {
 
     res.json({ data: company });
   } catch (error) {
-    console.error('Get company error:', error);
+    logger.error('Get company error:', error);
     res.status(500).json({ message: 'Failed to fetch company' });
   }
 };
@@ -460,7 +461,7 @@ export const getCompanyStats = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get company stats error:', error);
+    logger.error('Get company stats error:', error);
     res.status(500).json({ message: 'Failed to fetch company statistics' });
   }
 };
@@ -537,7 +538,7 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get user stats error:', error);
+    logger.error('Get user stats error:', error);
     res.status(500).json({ message: 'Failed to fetch user statistics' });
   }
 };
