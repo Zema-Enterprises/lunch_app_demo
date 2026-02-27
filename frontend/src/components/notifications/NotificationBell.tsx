@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { useNotificationStats, useNotifications, useMarkNotificationAsRead } from '../../lib/api/hooks';
+import { useNotificationStats, useNotifications, useMarkNotificationAsRead } from '@/lib/api/hooks';
 import { useNavigate } from 'react-router-dom';
-import { NotificationEvent } from '../../types';
+import { NotificationEvent } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import { useNotificationQueueStore } from '@/store/notificationQueueStore';
 import { buildTenantPath } from '@/lib/api/tenant';
 

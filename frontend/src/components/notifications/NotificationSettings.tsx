@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, Mail, Smartphone } from 'lucide-react';
-import { useNotificationSettings, useUpdateNotificationSettings, useUserPushSubscriptions } from '../../lib/api/hooks';
-import { Button } from '../ui/button';
-import { Skeleton } from '../ui/skeleton';
-import { Card } from '../ui/card';
+import { useNotificationSettings, useUpdateNotificationSettings, useUserPushSubscriptions } from '@/lib/api/hooks';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import { registerForPushNotifications, unsubscribeFromPushNotifications, isPushFeatureEnabled } from '@/lib/push/push-manager';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -21,7 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
  * - Success/error feedback
  */
 
-import { UserNotificationSettings, EditableNotificationKey } from '../../types';
+import { UserNotificationSettings, EditableNotificationKey } from '@/types';
 
 interface NotificationSetting {
   key: EditableNotificationKey;

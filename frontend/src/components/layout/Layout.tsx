@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
-import { SkipLink } from '../accessibility/SkipLink';
+import { SkipLink } from '@/components/accessibility/SkipLink';
 import { useNotificationsRealtime } from '@/lib/realtime/useNotificationsRealtime';
 import OfflineBanner from './OfflineBanner';
 import { useEffect } from 'react';

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { useCreateRestaurant } from '../../lib/api/hooks';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useCreateRestaurant } from '@/lib/api/hooks';
 
 interface AddRestaurantDialogProps {
   open: boolean;

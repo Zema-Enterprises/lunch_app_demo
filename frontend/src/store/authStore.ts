@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { User, Company } from '../types';
-import apiClient, { registerAccessTokenListener, setAccessToken } from '../lib/api/client';
+import { User, Company } from '@/types';
+import apiClient, { registerAccessTokenListener, setAccessToken } from '@/lib/api/client';
 
 interface AuthState {
   user: User | null;

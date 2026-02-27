@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useUpdateRestaurant } from '@/lib/api/hooks';
 import { Restaurant } from '@/types';
 import { Edit } from 'lucide-react';

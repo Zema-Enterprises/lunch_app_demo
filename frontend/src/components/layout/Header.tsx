@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { Button } from '../ui/button';
+import { useAuthStore } from '@/store/authStore';
+import { Button } from '@/components/ui/button';
 import { User, LogOut, Menu } from 'lucide-react';
-import NotificationBell from '../notifications/NotificationBell';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { useThemeContext } from '@/theme/ThemeProvider';
 import { useCompany } from '@/lib/api/hooks';
 import { isColorDark, resolveAssetUrl } from '@/theme/utils';

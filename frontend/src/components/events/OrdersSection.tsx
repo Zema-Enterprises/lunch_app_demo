@@ -1,10 +1,10 @@
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { ShoppingBag, Pencil } from 'lucide-react';
-import { useEventOrders } from '../../lib/api/hooks';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ShoppingBag, Pencil, Check } from 'lucide-react';
+import { useEventOrders, useConfirmPayment } from '@/lib/api/hooks';
 import { useNavigate } from 'react-router-dom';
-import type { User, Event, Order as OrderType } from '../../types';
+import type { User, Event, Order as OrderType } from '@/types';
 
 interface OrdersSectionProps {
   eventId: string;
@@ -15,10 +15,21 @@ interface OrdersSectionProps {
 interface OrderCardProps {
   order: OrderType;
   canEdit: boolean;
+  canConfirmPayment: boolean;
+  eventId: string;
   onEdit: () => void;
+  onConfirmPayment: () => void;
+  isConfirmingPayment: boolean;
 }
 
-const OrderCard: React.FC<OrderCardProps> = ({ order, canEdit, onEdit }) => {
+const OrderCard: React.FC<OrderCardProps> = ({
+  order,
+  canEdit,
+  canConfirmPayment,
+  onEdit,
+  onConfirmPayment,
+  isConfirmingPayment
+}) => {
   return (
     <div className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
       <div className="flex items-start justify-between mb-3">
@@ -35,6 +46,18 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, canEdit, onEdit }) => {
             <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
               Pending
             </Badge>
+          )}
+          {canConfirmPayment && !order.paymentConfirmed && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onConfirmPayment}
+              disabled={isConfirmingPayment}
+              className="h-8 text-green-700 border-green-300 hover:bg-green-50"
+            >
+              <Check className="w-3 h-3 mr-1" />
+              {isConfirmingPayment ? 'Confirming...' : 'Confirm Paid'}
+            </Button>
           )}
           {canEdit && (
             <Button
@@ -102,6 +125,7 @@ const EmptyOrdersState: React.FC<{ isParticipant: boolean; eventId: string }> = 
 const OrdersSection: React.FC<OrdersSectionProps> = ({ eventId, event, user }) => {
   const navigate = useNavigate();
   const { data: orders, isLoading, isError } = useEventOrders(eventId);
+  const confirmPayment = useConfirmPayment();
 
   if (!user) return null;
 
@@ -109,15 +133,27 @@ const OrdersSection: React.FC<OrdersSectionProps> = ({ eventId, event, user }) =
   const isAdmin = user.role === 'ADMIN';
   const isParticipant = event.participants?.some((p) => p.userId === user.id) || false;
   const canSeeAllOrders = isCreator || isAdmin;
-  const canEditOrder = event.status === 'OPEN';
+  const deadlinePassed = new Date() >= new Date(event.orderDeadline);
+  const canEditOrder = event.status === 'OPEN' && !deadlinePassed;
+  // Payment confirmation permission (per-order, matches backend logic)
+  const isActiveEvent = event.status !== 'COMPLETED' && event.status !== 'CANCELLED';
+  const canConfirmOrderPayment = (order: OrderType) => {
+    if (!isActiveEvent) return false;
+    if (event.paymentMethod === 'EVENT_CREATOR') return isCreator || isAdmin;
+    return order.userId === user.id; // INDIVIDUAL / COMPANY_EXPENSE: own order only
+  };
 
   // Filter orders based on user role
-  const displayedOrders = canSeeAllOrders 
-    ? orders 
+  const displayedOrders = canSeeAllOrders
+    ? orders
     : orders?.filter((order) => order.userId === user.id);
 
   const handleEditOrder = (orderId: string) => {
     navigate(`/events/${eventId}/orders/${orderId}/edit`);
+  };
+
+  const handleConfirmPayment = (orderId: string) => {
+    confirmPayment.mutate({ eventId, orderId });
   };
 
   if (isLoading) {
@@ -180,8 +216,12 @@ const OrdersSection: React.FC<OrdersSectionProps> = ({ eventId, event, user }) =
               <OrderCard
                 key={order.id}
                 order={order}
+                eventId={eventId}
                 canEdit={canEditOrder && order.userId === user.id}
+                canConfirmPayment={canConfirmOrderPayment(order)}
                 onEdit={() => handleEditOrder(order.id)}
+                onConfirmPayment={() => handleConfirmPayment(order.id)}
+                isConfirmingPayment={confirmPayment.isPending}
               />
             ))}
           </div>

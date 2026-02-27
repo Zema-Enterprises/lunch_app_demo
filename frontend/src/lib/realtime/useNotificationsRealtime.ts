@@ -6,7 +6,7 @@ import { createNotificationsSocket } from './socket-client';
 import { resolveNotificationsSocketUrl } from './config';
 import { GATEWAY_HANDSHAKE_EVENT, NOTIFICATION_CREATED_EVENT } from './constants';
 import { handshakeSchema } from './handshake';
-import { notificationEventSchema } from '../validation/schemas';
+import { notificationEventSchema } from '@/lib/validation/schemas';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationsRealtimeStore, DEFAULT_FALLBACK_MS } from '@/store/notificationsRealtimeStore';
 import { useNotificationQueueStore } from '@/store/notificationQueueStore';

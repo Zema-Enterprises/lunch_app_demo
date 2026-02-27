@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '../ui/input';
-import { useChangePassword } from '../../lib/api/hooks';
+import { Input } from '@/components/ui/input';
+import { useChangePassword } from '@/lib/api/hooks';
 import { X } from 'lucide-react';
 import {
   PASSWORD_COMPLEXITY_REGEX,
   PASSWORD_REQUIREMENTS_MESSAGE,
   PASSWORD_REQUIREMENTS_HINT,
-} from '../../lib/validation/schemas';
+} from '@/lib/validation/schemas';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;

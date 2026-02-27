@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState, useCallback, memo } from 'react';
 import { Bell, Check, CheckCheck } from 'lucide-react';
-import { 
-  useNotifications, 
-  useMarkNotificationAsRead, 
-  useMarkAllNotificationsAsRead 
-} from '../../lib/api/hooks';
+import {
+  useNotifications,
+  useMarkNotificationAsRead,
+  useMarkAllNotificationsAsRead
+} from '@/lib/api/hooks';
 import { useNavigate } from 'react-router-dom';
-import { NotificationEvent } from '../../types';
+import { NotificationEvent } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
-import { Button } from '../ui/button';
-import { EmptyState } from '../ui/empty-state';
-import { Skeleton } from '../ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ICON_MAP: Record<NotificationEvent['type'] | 'DEFAULT', string> = {
   EVENT_CREATED: '🎉',

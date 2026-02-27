@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from './client';
-import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User, CompanyTheme } from '../../types';
-import { useNotificationStore } from '../../store/notificationStore';
-import { useNotificationsRealtimeStore, selectNotificationsRefetchInterval } from '../../store/notificationsRealtimeStore';
+import { Restaurant, Event, Order, NotificationEvent, UserNotificationSettings, NotificationStats, NotificationAnalyticsSummary, TenantInvite, User, CompanyTheme } from '@/types';
+import { useNotificationStore } from '@/store/notificationStore';
+import { useNotificationsRealtimeStore, selectNotificationsRefetchInterval } from '@/store/notificationsRealtimeStore';
 import { buildTenantPath, getCurrentTenantSlug } from './tenant';
 
 // Restaurants
@@ -297,7 +297,7 @@ export const useJoinEvent = () => {
 export const useCloseEvent = () => {
   const queryClient = useQueryClient();
   const { addToast } = useNotificationStore();
-  
+
   return useMutation({
     mutationFn: async (eventId: string) => {
       const response = await apiClient.post<{ data: Event }>(`/events/${eventId}/close`);
@@ -310,6 +310,64 @@ export const useCloseEvent = () => {
     },
     onError: () => {
       addToast({ type: 'error', message: 'Failed to close event' });
+    },
+  });
+};
+
+export const useCompleteEvent = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
+
+  type CompletionResult = {
+    completed: boolean;
+    message: string;
+    criteria?: {
+      isClosed: boolean;
+      hasOrders: boolean;
+      allPaid: boolean;
+      isDelivered: boolean;
+    };
+  };
+
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      const response = await apiClient.post<{ data: CompletionResult }>(`/events/${eventId}/check-completion`);
+      return response.data.data;
+    },
+    onSuccess: (result, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      if (result.completed) {
+        addToast({ type: 'success', message: 'Event completed successfully!' });
+      } else {
+        addToast({ type: 'error', message: result.message });
+      }
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Event cannot be completed yet';
+      addToast({ type: 'error', message });
+    },
+  });
+};
+
+export const useMarkEventDelivered = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
+
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      const response = await apiClient.patch<{ data: Event }>(`/events/${eventId}`, {
+        deliveredAt: new Date().toISOString(),
+      });
+      return response.data.data;
+    },
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      addToast({ type: 'success', message: 'Event marked as delivered!' });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Failed to mark event as delivered' });
     },
   });
 };
@@ -379,6 +437,30 @@ export const useCancelOrder = () => {
     },
     onError: () => {
       addToast({ type: 'error', message: 'Failed to cancel order' });
+    },
+  });
+};
+
+// Confirm payment for an order
+export const useConfirmPayment = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
+
+  return useMutation({
+    mutationFn: async ({ eventId, orderId }: { eventId: string; orderId: string }) => {
+      const response = await apiClient.patch<{ data: Order }>(`/events/${eventId}/orders/${orderId}/payment`, {
+        paymentConfirmed: true,
+      });
+      return response.data.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders', variables.eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', variables.eventId] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      addToast({ type: 'success', message: 'Payment confirmed!' });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Failed to confirm payment' });
     },
   });
 };
@@ -841,4 +923,3 @@ export const useUserPushSubscriptions = () => {
     staleTime: 30_000, // Cache for 30 seconds
   });
 };
-
