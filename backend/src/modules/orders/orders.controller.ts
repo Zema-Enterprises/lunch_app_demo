@@ -73,6 +73,11 @@ export const createOrUpdateOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Event is closed for orders' });
     }
 
+    // Check if order deadline has passed
+    if (new Date() >= new Date(event.orderDeadline)) {
+      return res.status(400).json({ message: 'Order deadline has passed' });
+    }
+
     // Check if user is participant
     const participant = await prisma.eventParticipant.findUnique({
       where: {
@@ -90,8 +95,11 @@ export const createOrUpdateOrder = async (req: AuthRequest, res: Response) => {
     // Validate menu items if provided
     if (orderItems && orderItems.length > 0) {
       for (const item of orderItems) {
-        const menuItem = await prisma.menuItem.findUnique({
-          where: { id: item.menuItemId },
+        const menuItem = await prisma.menuItem.findFirst({
+          where: {
+            id: item.menuItemId,
+            restaurant: { companyId: req.user!.companyId },
+          },
         });
         
         if (!menuItem) {
@@ -287,20 +295,19 @@ export const confirmPayment = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Permission check: 
-    // - If EVENT_CREATOR payment method, only creator can confirm payments
-    // - Otherwise, only order owner can confirm their own payment
+    // Permission check:
+    // - EVENT_CREATOR: only event creator can confirm payments
+    // - INDIVIDUAL/COMPANY_EXPENSE: only order owner can confirm payment
     const isCreator = event.createdById === req.user!.userId;
     const isOwner = order.userId === req.user!.userId;
+    const isCreatorPayment = event.paymentMethod === 'EVENT_CREATOR';
 
-    if (event.paymentMethod === 'EVENT_CREATOR') {
-      if (!isCreator) {
-        return res.status(403).json({ message: 'Only event creator can confirm payments' });
-      }
-    } else {
-      if (!isOwner) {
-        return res.status(403).json({ message: 'You can only confirm your own payment' });
-      }
+    if (isCreatorPayment && !isCreator) {
+      return res.status(403).json({ message: 'Only event creator can confirm payments' });
+    }
+
+    if (!isCreatorPayment && !isOwner) {
+      return res.status(403).json({ message: 'You do not have permission to confirm this payment' });
     }
 
     const updated = await prisma.order.update({
