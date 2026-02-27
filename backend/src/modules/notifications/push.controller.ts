@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middleware/auth';
+import { logger } from '../../utils/logger';
 
 const normalizeExpiration = (expiration?: number | null) => {
   if (!expiration && expiration !== 0) return null;
@@ -21,7 +22,7 @@ export const getPushPublicKey = (req: AuthRequest, res: Response) => {
 
     return res.json({ data: { publicKey } });
   } catch (error) {
-    console.error('Error loading push public key:', error);
+    logger.error('Error loading push public key:', error);
     return res.status(500).json({ message: 'Failed to load push public key' });
   }
 };
@@ -45,7 +46,7 @@ export const getPushSubscriptions = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching push subscriptions:', error);
+    logger.error('Error fetching push subscriptions:', error);
     return res.status(500).json({ message: 'Failed to fetch push subscriptions' });
   }
 };
@@ -61,33 +62,38 @@ export const registerPushSubscription = async (req: AuthRequest, res: Response) 
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const subscription = await prisma.pushSubscription.upsert({
-    where: { endpoint },
-    update: {
-      keys,
-      expirationTime: normalizeExpiration(expirationTime),
-      userAgent,
-      userId: req.user.userId,
-      companyId: req.user.companyId,
-    },
-    create: {
-      endpoint,
-      keys,
-      expirationTime: normalizeExpiration(expirationTime),
-      userAgent,
-      userId: req.user.userId,
-      companyId: req.user.companyId,
-    },
-  });
+  try {
+    const subscription = await prisma.pushSubscription.upsert({
+      where: { endpoint },
+      update: {
+        keys,
+        expirationTime: normalizeExpiration(expirationTime),
+        userAgent,
+        userId: req.user.userId,
+        companyId: req.user.companyId,
+      },
+      create: {
+        endpoint,
+        keys,
+        expirationTime: normalizeExpiration(expirationTime),
+        userAgent,
+        userId: req.user.userId,
+        companyId: req.user.companyId,
+      },
+    });
 
-  return res.status(201).json({
-    data: {
-      id: subscription.id,
-      endpoint: subscription.endpoint,
-      userId: subscription.userId,
-      userAgent: subscription.userAgent,
-    },
-  });
+    return res.status(201).json({
+      data: {
+        id: subscription.id,
+        endpoint: subscription.endpoint,
+        userId: subscription.userId,
+        userAgent: subscription.userAgent,
+      },
+    });
+  } catch (error) {
+    logger.error('Error registering push subscription:', error);
+    return res.status(500).json({ message: 'Failed to register push subscription' });
+  }
 };
 
 export const deletePushSubscription = async (req: AuthRequest, res: Response) => {
@@ -101,12 +107,17 @@ export const deletePushSubscription = async (req: AuthRequest, res: Response) =>
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  await prisma.pushSubscription.deleteMany({
-    where: {
-      endpoint,
-      userId: req.user.userId,
-    },
-  });
+  try {
+    await prisma.pushSubscription.deleteMany({
+      where: {
+        endpoint,
+        userId: req.user.userId,
+      },
+    });
 
-  return res.status(204).send();
+    return res.status(204).send();
+  } catch (error) {
+    logger.error('Error deleting push subscription:', error);
+    return res.status(500).json({ message: 'Failed to delete push subscription' });
+  }
 };
