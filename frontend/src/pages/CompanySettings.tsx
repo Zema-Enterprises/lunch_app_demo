@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notificationStore';
 import {
   useCompany,
@@ -568,19 +569,19 @@ export default function CompanySettings() {
                     }}
                   >
                     <span className="text-sm font-medium flex items-center gap-2" style={{ color: previewTextColor }}>
-                      <User className="w-4 h-4" style={{ color: previewUsesInvertedTone ? '#e2e8f0' : 'rgb(71 85 105)' }} />
+                      <User className={cn("w-4 h-4", previewUsesInvertedTone ? "text-slate-200" : "text-slate-500")} />
                       {user?.name || 'User Name'}
                     </span>
                     {user?.role === 'ADMIN' && (
                       <span
-                        className="px-2 py-1 text-xs rounded-full"
-                        style={{ background: themeForm.secondaryColor, color: previewSecondaryDark ? '#f8fafc' : '#0f172a' }}
+                        className={cn("px-2 py-1 text-xs rounded-full", previewSecondaryDark ? "text-slate-50" : "text-slate-900")}
+                        style={{ background: themeForm.secondaryColor }}
                       >
                         Admin
                       </span>
                     )}
-                    <Bell className="w-5 h-5" style={{ color: previewUsesInvertedTone ? '#f8fafc' : '#0f172a' }} />
-                    <LogOut className="w-4 h-4" style={{ color: previewUsesInvertedTone ? '#f8fafc' : '#0f172a' }} />
+                    <Bell className={cn("w-5 h-5", previewUsesInvertedTone ? "text-slate-50" : "text-slate-900")} />
+                    <LogOut className={cn("w-4 h-4", previewUsesInvertedTone ? "text-slate-50" : "text-slate-900")} />
                   </div>
                 </div>
               </div>
