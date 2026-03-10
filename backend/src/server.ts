@@ -7,6 +7,7 @@ import { env } from './config/env';
 import { logger } from './utils/logger';
 import { createNotificationsServer, RedisClient, RedisClientFactory } from './realtime/notifications.gateway.server';
 import { registerNotificationsGateway, clearNotificationsGateway } from './realtime/notifications.registry';
+import { startDeadlineChecker, stopDeadlineChecker } from './scheduler/deadline-checker';
 
 const PORT = env.PORT;
 
@@ -56,10 +57,12 @@ const start = async () => {
   httpServer.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
     logger.info(`Environment: ${env.NODE_ENV}`);
+    startDeadlineChecker();
   });
 
   const shutdown = async () => {
     logger.info('Shutting down server');
+    stopDeadlineChecker();
     clearNotificationsGateway();
     try {
       await Promise.all([

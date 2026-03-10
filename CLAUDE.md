@@ -4,144 +4,172 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LunchSync** is a multi-tenant lunch ordering and event management system for companies. Employees can organize lunch events, order from restaurants, and manage payments.
+LunchSync is a multi-tenant SaaS platform for coordinating corporate lunch orders. It allows companies to create lunch events, select restaurants, gather orders from team members, and coordinate deliveries.
 
 **Tech Stack:**
-- Backend: Node.js, Express, TypeScript, Prisma (PostgreSQL)
-- Frontend: React 18, TypeScript, Vite, TailwindCSS, TanStack Query, Zustand
-- Testing: Jest (backend), Vitest (frontend), MSW (API mocking)
-- Auth: JWT tokens with bcrypt
+- Frontend: React 18 + TypeScript, Vite, Tailwind CSS + shadcn/ui, Zustand, TanStack Query, React Router v6
+- Backend: Node.js 20+ + TypeScript, Express.js, PostgreSQL 15+, Prisma ORM, Socket.IO + Redis
+- Testing: Jest + Supertest (backend), Vitest + React Testing Library + MSW (frontend)
 
-## Development Commands
+## Common Commands
 
-### Backend (from `/backend`)
+### Development
 ```bash
-npm run dev              # Start dev server (port 5000)
-npm run build            # Compile TypeScript
-npm test                 # Run all tests
-npm test -- <pattern>    # Run specific test file
-npm test -- --coverage   # Run with coverage
-npm run db:migrate       # Apply Prisma migrations
-npm run db:seed          # Seed database
-npx prisma studio        # Open Prisma Studio
-npx prisma migrate dev --name <name>  # Create new migration
-npx prisma generate      # Regenerate Prisma client
-```
-
-### Frontend (from `/frontend`)
-```bash
-npm run dev              # Start dev server (port 3000)
-npm run build            # Build for production
-npm test                 # Run tests (Vitest)
-npm test -- <pattern>    # Run specific test
-npm test -- --coverage   # Run with coverage
-npm run lint             # Run ESLint
-```
-
-### Full Stack Development
-```bash
-# Terminal 1: Start PostgreSQL
+# Start services (PostgreSQL on 5434, Redis on 6381)
 docker-compose up -d
 
-# Terminal 2: Backend
+# Backend (port 5000)
 cd backend && npm run dev
 
-# Terminal 3: Frontend
+# Frontend (port 3000)
 cd frontend && npm run dev
+```
+
+### Testing
+```bash
+# Backend tests
+cd backend && npm test
+cd backend && npm test -- --coverage
+cd backend && npm test -- <feature>.integration.test.ts  # Single file
+
+# Frontend tests
+cd frontend && npm test
+cd frontend && npm run test:coverage
+cd frontend && npm test -- <Component>.test.tsx  # Single file
+
+# Full test suite
+./run-tests.sh
+```
+
+### Database
+```bash
+cd backend
+npx prisma migrate dev --name <name>  # Create migration
+npm run db:seed                        # Seed demo data
+npx prisma studio                      # GUI for database
+```
+
+### Build & Lint
+```bash
+cd frontend && npm run build          # Build frontend
+cd frontend && npm run lint           # Lint (strict, 0 warnings)
+cd backend && npm run build           # Build backend
 ```
 
 ## Architecture
 
-### Backend Modules (`backend/src/modules/`)
-Each feature follows the pattern: `<feature>.controller.ts`, `<feature>.routes.ts`, `<feature>.validation.ts`
-- **auth**: Login, register, JWT refresh tokens
-- **events**: CRUD, status transitions (OPEN → CLOSED → COMPLETED/CANCELLED)
-- **orders**: Order placement, menu-based or custom orders
-- **restaurants**: Restaurant and menu item management
-- **notifications**: Real-time (Socket.IO), push, email notifications
-- **push**: Web push subscription management
+### Multi-Tenancy (Critical)
+Every database query MUST filter by `companyId`. Data isolation is enforced at the database level.
 
-### Frontend Structure (`frontend/src/`)
-- **components/ui/**: Reusable shadcn-style components (Button, Card, Input, etc.)
-- **components/layout/**: Header, Sidebar, Layout
-- **components/features/**: Feature-specific components
-- **lib/api/**: Axios client with JWT injection, React Query hooks
-- **store/**: Zustand stores (auth, events, restaurants, notifications)
-- **pages/**: Route components
-
-### Multi-Tenant Data Model
-- All data is isolated by `companyId`
-- Company identified by unique `slug` in URLs
-- Users belong to exactly one company
-- Events, restaurants, orders scoped to company
-
-## API Response Formats
-
-**Success responses** must wrap data:
 ```typescript
-res.json({ data: result });         // 200/201
-res.status(204).send();             // DELETE
-```
-
-**Error responses** use message field:
-```typescript
-res.status(400).json({ message: 'Validation error' });
-res.status(401).json({ message: 'Unauthorized' });
-res.status(403).json({ message: 'Forbidden' });
-res.status(404).json({ message: 'Not found' });
-```
-
-## Key Patterns
-
-### Company Data Isolation (CRITICAL)
-Every query MUST filter by `companyId`:
-```typescript
-const event = await prisma.event.findFirst({
-  where: { id, companyId: req.user!.companyId }
+// CORRECT - Company isolation enforced
+const events = await prisma.event.findMany({
+  where: { companyId: req.user.companyId }
 });
+
+// WRONG - Data leakage risk
+const events = await prisma.event.findMany();
 ```
 
-### Test Helpers (`backend/src/test/helpers/`)
-- `setupCompanyWithUsers({ employeeCount })` - Create test company with users
-- `cleanupTestData(companyId)` - Clean up after tests
-- `authenticatedRequest(app, token)` - Make authenticated requests
+### API Response Format
+All endpoints return data wrapped in `{ data: ... }`:
+```typescript
+// Backend response
+res.json({ data: { user, token } });
 
-### Frontend API Hooks (`frontend/src/lib/api/hooks.ts`)
-- Use `useQuery` for fetching, `useMutation` for mutations
-- Hooks unwrap `{ data: ... }` wrapper automatically
-- Mutations invalidate related queries
-
-## TDD Workflow
-
-This project follows **test-driven development**: tests define correct behavior, code is adjusted to pass tests.
-
-1. Write comprehensive tests first (integration tests for API, component tests for UI)
-2. Run tests, expect failures
-3. Implement/fix code to match test expectations
-4. Repeat until all tests pass
-5. Document API changes in `docs/testing/API_ADJUSTMENTS_<FEATURE>.md`
-
-## Database
-
-Schema defined in `backend/prisma/schema.prisma`. Key models:
-- **Company**: Multi-tenant root entity
-- **User**: Belongs to one company, has role (ADMIN/MANAGER/USER)
-- **Event**: Lunch event with status workflow
-- **Order**: User order for an event (menu items or custom text)
-- **Restaurant/MenuItem**: Company-scoped restaurant data
-- **NotificationEvent**: In-app notification with delivery tracking
-
-## Environment Variables
-
-Backend `.env`:
-```
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-JWT_REFRESH_SECRET=...
+// Frontend consumption - double unwrap
+const { token, user } = response.data.data;
 ```
 
-Frontend `.env`:
+Error responses use `{ message: ... }`:
+```typescript
+res.status(400).json({ message: 'Validation failed' });
 ```
-VITE_API_URL=http://localhost:5000/api
-VITE_VAPID_PUBLIC_KEY=...
+
+### Module Structure
 ```
+backend/src/modules/<feature>/
+├── <feature>.routes.ts       # Express router
+├── <feature>.controller.ts   # Request handlers
+├── <feature>.validation.ts   # Zod schemas
+└── __tests__/                # Unit tests
+
+frontend/src/
+├── components/               # React components (ui/, layout/, features/, etc.)
+├── pages/                    # Route pages
+├── store/                    # Zustand stores (authStore, eventStore, etc.)
+├── lib/api/                  # API client, hooks
+├── lib/validation/           # Zod schemas (mirror backend)
+└── types/                    # TypeScript types
+```
+
+### Real-Time Architecture
+- Socket.IO server with Redis adapter for horizontal scaling
+- Notifications gateway in `backend/src/realtime/`
+- Frontend Socket.IO client in `frontend/src/lib/realtime/`
+- Push notifications via web-push with VAPID keys
+
+## Development Workflow
+
+### TDD Approach (Mandatory)
+Tests define correct behavior. Write/update tests first, then adjust code to match:
+
+1. Write integration tests in `backend/src/__tests__/integration/`
+2. Run tests to see failures
+3. Implement/adjust API to match test expectations
+4. Document changes in `docs/testing/API_ADJUSTMENTS_<FEATURE>.md`
+5. Update `docs/testing/PROGRESS.md`
+
+### Route Ordering (Bug Prevention)
+Specific routes MUST come before dynamic params:
+```typescript
+// CORRECT
+router.get('/stats', getStats);     // /api/users/stats
+router.get('/:id', getUser);        // /api/users/:id
+
+// WRONG - /:id matches /stats
+router.get('/:id', getUser);
+router.get('/stats', getStats);     // Never reached!
+```
+
+### Cross-Layer Changes
+When changing frontend that needs new API:
+1. Write backend integration test first
+2. Implement backend endpoint
+3. Document API changes
+4. Then complete frontend changes
+
+### Test Helpers
+Backend (`backend/src/test/helpers/`):
+- `setupCompanyWithUsers({ employeeCount: 2 })` - Creates isolated test company
+- `authenticatedRequest(app, token)` - Supertest with auth header
+- `cleanupTestData(companyId)` - Test teardown
+
+Frontend (`frontend/src/test/`):
+- `createMockUser()`, `createMockEvent()` - Factory functions
+- MSW handlers in `mocks/handlers.ts`
+- `renderWithProviders()` - Wraps with React Query + Router
+
+## Key Business Rules
+
+1. **Roles**: ADMIN (manage restaurants, menus, settings), MANAGER, USER (create/join events, place orders)
+2. **Event Lifecycle**: OPEN → CLOSED → COMPLETED/CANCELLED
+3. **Payment Methods**: EVENT_CREATOR, INDIVIDUAL, COMPANY_EXPENSE
+4. **Orders**: Menu-based (structured items) or custom (free text)
+
+## Demo Credentials
+- Admin: `admin@demo.com` / `password123`
+- User: `user@demo.com` / `password123`
+
+## Key Files Reference
+
+| Purpose | Location |
+|---------|----------|
+| Database schema | `backend/prisma/schema.prisma` |
+| API routes | `backend/src/modules/*/\*.routes.ts` |
+| Test helpers | `backend/src/test/helpers/` |
+| Frontend stores | `frontend/src/store/` |
+| API client | `frontend/src/lib/api/client.ts` |
+| Test utilities | `frontend/src/test/` |
+| Development workflow | `INSTRUCTIONS.md` |
+| Testing progress | `docs/testing/PROGRESS.md` |

@@ -15,6 +15,7 @@ import {
 } from '../utils/factories';
 import type { UserNotificationSettings } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { buildTenantPath } from '@/lib/api/tenant';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -116,7 +117,7 @@ describe('Notification Workflow Integration', () => {
 
     await waitFor(() => {
       expect(markAsReadCalled).toBe(true);
-      expect(window.location.pathname).toBe('/events/event-1');
+      expect(window.location.pathname).toBe(buildTenantPath('/events/event-1'));
     });
 
     queryClient.clear();
@@ -157,7 +158,7 @@ describe('Notification Workflow Integration', () => {
     await user.click(viewAllButton);
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/notifications');
+      expect(window.location.pathname).toBe(buildTenantPath('/notifications'));
     });
 
     const bulkButton = await screen.findByRole('button', { name: /mark all as read/i });
@@ -246,7 +247,7 @@ describe('Notification Workflow Integration', () => {
     await user.click(await screen.findByRole('button', { name: /view all notifications/i }));
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/notifications');
+      expect(window.location.pathname).toBe(buildTenantPath('/notifications'));
     });
 
     await user.click(screen.getByRole('button', { name: /^unread/i }));

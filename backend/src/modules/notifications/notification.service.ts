@@ -201,7 +201,7 @@ export async function getUserNotificationSettings(userId: string) {
     settings = await prisma.userNotificationSettings.create({
       data: {
         userId,
-        emailEnabled: false,
+        emailEnabled: true,
         inAppEnabled: true,
         notifyOnEventCreated: true, // Users should know about new events
         notifyOnOrderPlaced: true,

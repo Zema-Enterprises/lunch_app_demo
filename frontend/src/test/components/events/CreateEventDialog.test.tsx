@@ -435,7 +435,7 @@ describe('CreateEventDialog - Form Submission', () => {
     await user.click(options[1]); // Pizza Palace - Italian
     
     await user.type(screen.getByLabelText(/delivery location/i), 'Office Lobby');
-    await user.type(screen.getByLabelText(/order deadline/i), '2025-10-15T14:30');
+    await user.type(screen.getByLabelText(/order deadline/i), '2030-10-15T14:30');
 
     // Submit form
     const submitButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^create event$/i });
@@ -483,7 +483,7 @@ describe('CreateEventDialog - Form Submission', () => {
     await user.click(restaurantOptions[1]);
     
     await user.type(screen.getByLabelText(/delivery location/i), 'Office');
-    await user.type(screen.getByLabelText(/order deadline/i), '2025-10-15T14:30');
+    await user.type(screen.getByLabelText(/order deadline/i), '2030-10-15T14:30');
 
     const submitButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^create event$/i });
     await user.click(submitButton);
@@ -526,7 +526,7 @@ describe('CreateEventDialog - Form Submission', () => {
     await user.click(restaurantOptions[1]);
     
     await user.type(screen.getByLabelText(/delivery location/i), 'Office');
-    await user.type(screen.getByLabelText(/order deadline/i), '2025-10-15T14:30');
+    await user.type(screen.getByLabelText(/order deadline/i), '2030-10-15T14:30');
 
     const submitButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^create event$/i });
     await user.click(submitButton);
@@ -565,7 +565,7 @@ describe('CreateEventDialog - Form Submission', () => {
     await user.click(restaurantOptions[1]);
     
     await user.type(screen.getByLabelText(/delivery location/i), 'Office');
-    await user.type(screen.getByLabelText(/order deadline/i), '2025-10-15T14:30');
+    await user.type(screen.getByLabelText(/order deadline/i), '2030-10-15T14:30');
 
     const submitButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^create event$/i });
     await user.click(submitButton);
@@ -756,6 +756,43 @@ describe('CreateEventDialog - Accessibility', () => {
   });
 });
 
+describe('CreateEventDialog - Deadline Validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should have min attribute set to current time on deadline input', async () => {
+    const user = userEvent.setup();
+    renderCreateEventDialog();
+
+    await user.click(screen.getByRole('button', { name: /create event/i }));
+
+    const deadlineInput = screen.getByLabelText(/order deadline/i);
+    expect(deadlineInput).toHaveAttribute('min');
+
+    // The min attribute should be a datetime-local format string
+    const minValue = deadlineInput.getAttribute('min');
+    expect(minValue).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+  });
+
+  it('should prevent selecting past dates via min attribute', async () => {
+    const user = userEvent.setup();
+    renderCreateEventDialog();
+
+    await user.click(screen.getByRole('button', { name: /create event/i }));
+
+    const deadlineInput = screen.getByLabelText(/order deadline/i);
+    const minValue = deadlineInput.getAttribute('min');
+
+    // The min value should be approximately now
+    const minDate = new Date(minValue!);
+    const now = new Date();
+
+    // min should be within 1 minute of current time (allowing for test execution time)
+    expect(Math.abs(minDate.getTime() - now.getTime())).toBeLessThan(60000);
+  });
+});
+
 describe('CreateEventDialog - Error Handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -791,7 +828,7 @@ describe('CreateEventDialog - Error Handling', () => {
     await user.click(restaurantOptions[1]);
     
     await user.type(screen.getByLabelText(/delivery location/i), 'Office');
-    await user.type(screen.getByLabelText(/order deadline/i), '2025-10-15T14:30');
+    await user.type(screen.getByLabelText(/order deadline/i), '2030-10-15T14:30');
 
     const submitButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^create event$/i });
     await user.click(submitButton);

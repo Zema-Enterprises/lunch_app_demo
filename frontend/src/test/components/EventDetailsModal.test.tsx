@@ -13,6 +13,7 @@ vi.mock('@/lib/api/hooks', () => ({
   useCompanyTheme: vi.fn(() => ({ data: null, isLoading: false })),
   useUpdateCompanyTheme: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUploadThemeCover: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useConfirmPayment: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
 // Mock accessibility hooks

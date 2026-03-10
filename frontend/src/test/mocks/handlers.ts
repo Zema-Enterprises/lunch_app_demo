@@ -444,4 +444,18 @@ http.options(`${API_URL}/c/:slug/admin/theme/cover`, () => new HttpResponse(null
       }
     });
   }),
+
+  http.get(`${API_URL}/notifications/push-subscriptions`, () => {
+    return HttpResponse.json({
+      data: {
+        subscriptions: [],
+        count: 0,
+        hasActiveSubscription: false,
+      },
+    });
+  }),
+
+  http.options(`${API_URL}/notifications/push-subscriptions`, () => {
+    return new HttpResponse(null, { status: 200 });
+  }),
 ];

@@ -14,6 +14,7 @@ vi.mock('@/store/authStore', () => {
 });
 
 describe('push manager', () => {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
   const mockRegister = vi.fn();
   const mockSubscribe = vi.fn();
   const mockUnsubscribe = vi.fn();
@@ -75,14 +76,14 @@ describe('push manager', () => {
     expect(mockRegister).toHaveBeenCalledWith('/service-worker.js');
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      '/api/notifications/push/public-key',
+      `${API_BASE_URL}/notifications/push/public-key`,
       expect.objectContaining({ method: 'GET' })
     );
     const firstHeaders = (fetch as unknown as Mock).mock.calls[0][1]?.headers;
     expect(firstHeaders?.get('Authorization')).toBe('Bearer test-token');
     expect(fetch).toHaveBeenNthCalledWith(
       2,
-      '/api/notifications/push-subscriptions',
+      `${API_BASE_URL}/notifications/push-subscriptions`,
       expect.objectContaining({
         method: 'POST',
       })
