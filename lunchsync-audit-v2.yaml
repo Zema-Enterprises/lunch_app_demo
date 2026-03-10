@@ -1,0 +1,615 @@
+schema_version: "promptbook/v1"
+name: "lunchsync-audit-v2"
+version: "2.0.0"
+description: >
+  Follow-up audit promptbook for LunchSync.
+  Resolves remaining known issues from lunchsync-audit-v1 (AUDIT_REPORT.md).
+  Covers: TypeScript type error fix, dead code removal, path alias migration,
+  CompanySettings inline style cleanup.
+  Total issues addressed: 6 (from AUDIT_REPORT.md "Remaining Known Issues").
+
+defaults:
+  agent: "claude"
+  workspace_dir: "."
+  approval_mode: "auto"
+  timeout_minutes: 60
+
+global_rules:
+  - "Work in the repository at the workspace_dir passed at runtime."
+  - "Read .claude/INSTRUCTIONS.md before starting any step — it is your law."
+  - "After each step: run the verification commands and ensure all pass before moving on."
+  - "Commit after each step with message 'audit/<step-id>: <step-title>'."
+  - "Do NOT break existing passing tests. If a test becomes stale due to your fix, update it."
+  - "Keep changes minimal and focused on the step's stated goal. No scope creep."
+  - "If a verification command fails, fix the root cause — do NOT modify the verification command."
+  - "Do NOT add new dependencies unless the step explicitly requires it."
+  - "Every Prisma query in controllers MUST include companyId in the where clause."
+  - "Always use { logger } from '../utils/logger' — never raw console.log/error/warn in backend."
+  - "API success responses use { data: ... } wrapper. Error responses use { message: '...' }."
+  - "Frontend interactive elements use shadcn/ui components from @/components/ui/, not raw HTML."
+  - "Frontend imports use @/ path alias — no relative ../  imports."
+
+steps:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 0 — Orientation (always first, always read-only)
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "00-orientation"
+    title: "Read project instructions and confirm baseline checks"
+    agent: "claude"
+    prompt: |
+      Read `.claude/INSTRUCTIONS.md` in full. Do not modify any files.
+
+      Then run the following baseline checks and report results:
+
+      ```bash
+      cd backend && npx tsc --noEmit 2>&1 | tail -20
+      cd ../frontend && npx tsc --noEmit 2>&1 | tail -20
+      ```
+
+      Produce a brief report:
+      - Current type errors: <count and summary>
+      - Confirmation that you have read INSTRUCTIONS.md
+      - Confirmation that AUDIT_REPORT.md remaining issues are understood
+
+      This is a read-only step. Save nothing.
+    verify:
+      - "test -f .claude/INSTRUCTIONS.md"
+      - "test -f AUDIT_REPORT.md"
+      - "echo 'orientation complete'"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 1 — Fix NotificationSettings.tsx type error (pre-existing TS error)
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "01-fix-notification-settings-type-error"
+    title: "Fix TypeScript error in NotificationSettings.tsx line 201"
+    prompt: |
+      ## Context
+      Per AUDIT_REPORT.md remaining issue #6: "Frontend type error in NotificationSettings.tsx
+      line 201 — Pre-existing TypeScript error (`Type 'string | boolean' is not assignable to
+      type 'undefined'`). Requires refactoring the notification settings type system."
+
+      ## Root cause analysis
+
+      **File:** `frontend/src/components/notifications/NotificationSettings.tsx`
+
+      The `UserNotificationSettings` interface (defined in `frontend/src/types/index.ts`) has both
+      string-typed fields (`id`, `userId`, `createdAt`, `updatedAt`) and boolean-typed fields (all
+      the `notifyOn*`, `emailNotifications`, `inAppNotifications`).
+
+      ```typescript
+      export interface UserNotificationSettings {
+        id: string;
+        userId: string;
+        notifyOnEventCreated: boolean;
+        notifyOnEventClosed: boolean;
+        notifyOnEventCompleted: boolean;
+        notifyOnEventDelivered: boolean;
+        notifyOnUserJoinedEvent: boolean;
+        notifyOnOrderPlaced: boolean;
+        notifyOnOrderUpdated: boolean;
+        notifyOnPaymentConfirmed: boolean;
+        notifyOnPaymentReminder: boolean;
+        emailNotifications: boolean;
+        inAppNotifications: boolean;
+        createdAt: string;
+        updatedAt: string;
+      }
+      ```
+
+      At line 164, `editableKeys` is typed as `Array<keyof UserNotificationSettings>`:
+
+      ```typescript
+      const editableKeys = useMemo<Array<keyof UserNotificationSettings>>(
+        () => ([
+          'emailNotifications',
+          'inAppNotifications',
+          'notifyOnEventCreated',
+          // ... more boolean keys
+        ]),
+        []
+      );
+      ```
+
+      Even though all values in the array are boolean-typed keys at runtime, TypeScript sees
+      `keyof UserNotificationSettings` which includes the string-typed keys (`id`, `userId`, etc.).
+      This makes `localSettings[key]` resolve to `string | boolean`, causing the error at line 201:
+
+      ```typescript
+      updates[key] = localSettings[key];  // TS2322: Type 'string | boolean' not assignable
+      ```
+
+      ## Fix required
+
+      ### File: `frontend/src/types/index.ts`
+
+      Add a new utility type that extracts only the boolean setting keys from
+      `UserNotificationSettings`. Place it directly after the `UserNotificationSettings` interface:
+
+      ```typescript
+      export type EditableNotificationKey = {
+        [K in keyof UserNotificationSettings]: UserNotificationSettings[K] extends boolean ? K : never;
+      }[keyof UserNotificationSettings];
+      ```
+
+      This produces a union type of only the boolean keys:
+      `'notifyOnEventCreated' | 'notifyOnEventClosed' | ... | 'emailNotifications' | 'inAppNotifications'`
+
+      ### File: `frontend/src/components/notifications/NotificationSettings.tsx`
+
+      1. Update the import to include the new type:
+         ```typescript
+         import { UserNotificationSettings, EditableNotificationKey } from '../../types';
+         ```
+
+      2. Update the `NotificationSetting` interface (line 24-29) to use the new type:
+         ```typescript
+         interface NotificationSetting {
+           key: EditableNotificationKey;
+           label: string;
+           description: string;
+           icon: string;
+         }
+         ```
+
+      3. Update `editableKeys` (line 164) to use the narrower type:
+         ```typescript
+         const editableKeys = useMemo<Array<EditableNotificationKey>>(
+           () => ([
+             'emailNotifications',
+             'inAppNotifications',
+             'notifyOnEventCreated',
+             'notifyOnUserJoinedEvent',
+             'notifyOnEventClosed',
+             'notifyOnEventDelivered',
+             'notifyOnPaymentConfirmed',
+             'notifyOnEventCompleted',
+             'notifyOnOrderPlaced',
+             'notifyOnOrderUpdated',
+             'notifyOnPaymentReminder',
+           ]),
+           []
+         );
+         ```
+
+      4. Update `handleToggle` (line 186) to accept the narrower type:
+         ```typescript
+         const handleToggle = (key: EditableNotificationKey) => {
+         ```
+
+      These changes narrow the type so TypeScript knows `localSettings[key]` is always `boolean`,
+      resolving the TS2322 error at line 201.
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/01-fix-notification-settings-type-error: fix TS2322 type error in NotificationSettings`
+
+    verify:
+      - "cd frontend && npx tsc --noEmit 2>&1 | grep -c 'error' | grep -q '^0$'"
+      - "grep -q 'EditableNotificationKey' frontend/src/types/index.ts"
+      - "grep -q 'EditableNotificationKey' frontend/src/components/notifications/NotificationSettings.tsx"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 2 — Remove dead code from eventStore and restaurantStore
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "02-remove-dead-store-code"
+    title: "Remove unused state and setters from eventStore and restaurantStore"
+    prompt: |
+      ## Context
+      Per AUDIT_REPORT.md remaining issue #4: "eventStore/restaurantStore have unused
+      `setEvents`/`setRestaurants` dead code."
+
+      Per INSTRUCTIONS.md Section 5 (State Management): "Server data MUST use TanStack Query hooks,
+      never fetched into Zustand stores. Zustand stores are for client-only state."
+
+      Both `useEventStore` and `useRestaurantStore` are NOT imported or used anywhere in
+      application code. They are only referenced in their own test files. The application uses
+      TanStack Query hooks for events and restaurants data fetching (in `frontend/src/lib/api/hooks.ts`).
+
+      ## Violations found
+
+      **File:** `frontend/src/store/eventStore.ts`
+      The entire store is unused in application code. Grep results show it is only imported in:
+      - `frontend/src/store/__tests__/eventStore.test.ts` (test file)
+      - `frontend/src/store/eventStore.ts` (itself)
+
+      The store contains:
+      - `events: Event[]` — duplicates server state (should use TanStack Query)
+      - `selectedEvent: Event | null` — unused in any component
+      - `filters: EventFilters` — unused in any component
+      - `setEvents()`, `setSelectedEvent()`, `setFilters()` — all unused
+
+      **File:** `frontend/src/store/restaurantStore.ts`
+      The entire store is unused in application code. Grep results show it is only imported in:
+      - `frontend/src/store/__tests__/restaurantStore.test.ts` (test file)
+      - `frontend/src/store/restaurantStore.ts` (itself)
+
+      The store contains:
+      - `restaurants: Restaurant[]` — duplicates server state
+      - `setRestaurants()` — unused
+
+      ## Fix required
+
+      ### Delete files:
+      1. Delete `frontend/src/store/eventStore.ts` — entirely unused dead code
+      2. Delete `frontend/src/store/restaurantStore.ts` — entirely unused dead code
+      3. Delete `frontend/src/store/__tests__/eventStore.test.ts` — tests for deleted store
+      4. Delete `frontend/src/store/__tests__/restaurantStore.test.ts` — tests for deleted store
+
+      ### Verification before deleting:
+      Before deleting, run a comprehensive grep to confirm these stores are not imported anywhere
+      in application code:
+
+      ```bash
+      grep -rn "eventStore" frontend/src/ --include='*.ts' --include='*.tsx' | grep -v '__tests__' | grep -v 'store/eventStore.ts'
+      grep -rn "restaurantStore" frontend/src/ --include='*.ts' --include='*.tsx' | grep -v '__tests__' | grep -v 'store/restaurantStore.ts'
+      ```
+
+      If either command returns results (unexpected imports), do NOT delete that store. Instead,
+      only remove the specific unused functions from the store interface and implementation.
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/02-remove-dead-store-code: remove unused eventStore and restaurantStore`
+
+    verify:
+      - "! test -f frontend/src/store/eventStore.ts"
+      - "! test -f frontend/src/store/restaurantStore.ts"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 3 — Migrate remaining relative imports to @/ path alias
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "03-migrate-store-relative-imports"
+    title: "Migrate remaining relative imports in store files to @/ path alias"
+    prompt: |
+      ## Context
+      Per AUDIT_REPORT.md remaining issue #1: "~20 more component files still use relative imports."
+      Per INSTRUCTIONS.md Section 1 (Architecture): "Frontend: always use `@/` path alias."
+
+      After audit v1 migrated all page files and audit v2 step 02 removed eventStore and
+      restaurantStore, the only remaining file with relative imports is `authStore.ts`.
+
+      ## Violations found
+
+      **File:** `frontend/src/store/authStore.ts`
+      Lines 2-3 use relative imports:
+      ```typescript
+      import { User, Company } from '../types';
+      import apiClient, { registerAccessTokenListener, setAccessToken } from '../lib/api/client';
+      ```
+
+      ## Fix required
+
+      ### File: `frontend/src/store/authStore.ts`
+
+      Replace the two relative imports with `@/` path alias:
+
+      ```typescript
+      import { User, Company } from '@/types';
+      import apiClient, { registerAccessTokenListener, setAccessToken } from '@/lib/api/client';
+      ```
+
+      ### Additional: scan for any other remaining relative imports
+
+      After fixing authStore, run a comprehensive scan for any remaining `../` imports in
+      non-test frontend source files:
+
+      ```bash
+      grep -rn "from '\.\." frontend/src/ --include='*.ts' --include='*.tsx' \
+        | grep -v 'node_modules' \
+        | grep -v '.test.' \
+        | grep -v '__tests__' \
+        | grep -v 'test/'
+      ```
+
+      If any additional files are found, fix them in this same step using the mapping:
+      - `'../lib/...'` → `'@/lib/...'`
+      - `'../store/...'` → `'@/store/...'`
+      - `'../components/...'` → `'@/components/...'`
+      - `'../types'` → `'@/types'`
+      - `'../types/...'` → `'@/types/...'`
+      - `'../../lib/...'` → `'@/lib/...'`
+      - `'../../components/...'` → `'@/components/...'`
+      - etc.
+
+      Do NOT change imports within `components/ui/` files (shadcn/ui primitives may use relative
+      imports by convention). Do NOT change test files.
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/03-migrate-store-relative-imports: migrate remaining relative imports to @/ alias`
+
+    verify:
+      - "! grep -n \"from '\\.\\.\" frontend/src/store/authStore.ts"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 4 — Replace hardcoded hex colors in CompanySettings theme preview
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "04-companysettings-hardcoded-colors"
+    title: "Replace hardcoded hex colors in CompanySettings.tsx with Tailwind classes"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 7 (Design System Governance): "No inline style={{ }} with
+      hardcoded values. Use Tailwind classes and design tokens."
+      Per AUDIT_REPORT.md remaining issue #5: "CompanySettings.tsx has extensive inline styles
+      for theme preview."
+
+      This step focuses ONLY on replacing hardcoded hex colors with Tailwind classes where possible.
+      Dynamic runtime values (theme colors from form state, computed rgba values) must remain as
+      inline styles — those are justified.
+
+      ## Violations found
+
+      **File:** `frontend/src/pages/CompanySettings.tsx`
+
+      Lines ~571, 577, 582, 583 contain hardcoded hex colors that have Tailwind equivalents:
+
+      1. Line ~571: User icon color
+         ```tsx
+         <User className="w-4 h-4" style={{ color: previewUsesInvertedTone ? '#e2e8f0' : 'rgb(71 85 105)' }} />
+         ```
+         `#e2e8f0` = `text-slate-200`, `rgb(71 85 105)` = `text-slate-500`
+
+      2. Line ~577: Admin badge text color
+         ```tsx
+         style={{ background: themeForm.secondaryColor, color: previewSecondaryDark ? '#f8fafc' : '#0f172a' }}
+         ```
+         `#f8fafc` = `text-slate-50`, `#0f172a` = `text-slate-900`
+         Note: `background: themeForm.secondaryColor` is a dynamic runtime value — keep it as inline style.
+
+      3. Line ~582: Bell icon color
+         ```tsx
+         <Bell className="w-5 h-5" style={{ color: previewUsesInvertedTone ? '#f8fafc' : '#0f172a' }} />
+         ```
+         `#f8fafc` = `text-slate-50`, `#0f172a` = `text-slate-900`
+
+      4. Line ~583: LogOut icon color
+         ```tsx
+         <LogOut className="w-4 h-4" style={{ color: previewUsesInvertedTone ? '#f8fafc' : '#0f172a' }} />
+         ```
+         Same mapping as above.
+
+      ## Fix required
+
+      ### File: `frontend/src/pages/CompanySettings.tsx`
+
+      Ensure `cn` is imported: `import { cn } from '@/lib/utils';` (may already be imported).
+
+      1. **User icon** — replace inline style with conditional Tailwind classes:
+         ```tsx
+         <User className={cn("w-4 h-4", previewUsesInvertedTone ? "text-slate-200" : "text-slate-500")} />
+         ```
+         Remove the `style={{ color: ... }}` prop entirely.
+
+      2. **Admin badge** — keep `background` as inline style (dynamic), move color to className:
+         ```tsx
+         <span
+           className={cn("px-2 py-1 text-xs rounded-full", previewSecondaryDark ? "text-slate-50" : "text-slate-900")}
+           style={{ background: themeForm.secondaryColor }}
+         >
+         ```
+
+      3. **Bell icon** — replace inline style with Tailwind:
+         ```tsx
+         <Bell className={cn("w-5 h-5", previewUsesInvertedTone ? "text-slate-50" : "text-slate-900")} />
+         ```
+
+      4. **LogOut icon** — replace inline style with Tailwind:
+         ```tsx
+         <LogOut className={cn("w-4 h-4", previewUsesInvertedTone ? "text-slate-50" : "text-slate-900")} />
+         ```
+
+      ## Important — what NOT to change
+
+      Do NOT modify any inline styles that use:
+      - `themeForm.primaryColor`, `themeForm.secondaryColor`, `themeForm.backgroundColor` — dynamic runtime values
+      - `previewBrandColor`, `previewCompanyColor`, `previewTextColor`, `previewNavBackground`,
+        `previewNavBorder` — computed preview variables
+      - Complex `rgba()` expressions for glass effects, shadows, gradients — cannot be expressed in Tailwind
+      - `backgroundImage` with `url()` — dynamic cover photo URL
+
+      These are justified inline styles per INSTRUCTIONS.md: "Dynamic company theming via
+      ThemeProvider requires runtime values."
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/04-companysettings-hardcoded-colors: replace hardcoded hex colors with Tailwind in CompanySettings`
+
+    verify:
+      - "! grep -n \"#e2e8f0\" frontend/src/pages/CompanySettings.tsx"
+      - "! grep -n \"#0f172a\" frontend/src/pages/CompanySettings.tsx"
+      - "! grep -n \"#f8fafc\" frontend/src/pages/CompanySettings.tsx"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 5 — Extract ThemePreview component from CompanySettings
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "05-extract-theme-preview-component"
+    title: "Extract theme preview section into a memoized ThemePreview component"
+    prompt: |
+      ## Context
+      Per AUDIT_REPORT.md remaining issue #5: "CompanySettings.tsx has extensive inline styles
+      for theme preview — Complex refactor needed."
+
+      The theme preview section of CompanySettings.tsx (lines ~471-600) contains ~12 inline
+      `style={{}}` objects with complex computed values. While the dynamic runtime values must
+      remain as inline styles (justified), the code can be improved by:
+      1. Extracting into a dedicated component for better organization
+      2. Memoizing style objects to avoid re-creating them on every render
+      3. Reducing cognitive load in the already-large CompanySettings page
+
+      ## Fix required
+
+      ### Create: `frontend/src/components/settings/ThemePreview.tsx`
+
+      Extract the theme preview section (the `<div data-testid="theme-preview">` and its children)
+      into a new `ThemePreview` component.
+
+      Props interface:
+      ```typescript
+      interface ThemePreviewProps {
+        themeForm: {
+          primaryColor: string;
+          secondaryColor: string;
+          backgroundColor: string;
+        };
+        coverActive: boolean;
+        resolvedPreviewCoverUrl: string | null;
+        previewUsesInvertedTone: boolean;
+        previewBrandColor: string;
+        previewCompanyColor: string;
+        previewTextColor: string;
+        previewNavBackground: string;
+        previewNavBorder: string;
+        previewSecondaryDark: boolean;
+        companyName: string;
+        userName: string;
+        userRole: string;
+      }
+      ```
+
+      Inside the component:
+      1. Use `useMemo` to compute style objects that depend on props:
+         ```typescript
+         const containerStyle = useMemo(() => ({
+           backgroundImage: coverActive && resolvedPreviewCoverUrl
+             ? `linear-gradient(...)  url(${resolvedPreviewCoverUrl})`
+             : undefined,
+           backgroundColor: coverActive ? undefined : themeForm.backgroundColor,
+           // ... rest of container styles
+         }), [coverActive, resolvedPreviewCoverUrl, themeForm.backgroundColor, ...]);
+
+         const overlayStyle = useMemo(() => ({
+           background: coverActive ? '...' : previewUsesInvertedTone ? '...' : 'transparent',
+           backdropFilter: coverActive ? 'blur(4px)' : undefined,
+         }), [coverActive, previewUsesInvertedTone]);
+         ```
+
+      2. Use `cn()` for all conditional Tailwind classes (importing from `@/lib/utils`)
+      3. Import `Button` from `@/components/ui/button` if any interactive elements exist
+      4. Use `@/` path alias for all imports
+
+      ### Update: `frontend/src/pages/CompanySettings.tsx`
+
+      Replace the extracted JSX with the new component:
+      ```tsx
+      import { ThemePreview } from '@/components/settings/ThemePreview';
+
+      // In the render:
+      <ThemePreview
+        themeForm={themeForm}
+        coverActive={coverActive}
+        resolvedPreviewCoverUrl={resolvedPreviewCoverUrl}
+        previewUsesInvertedTone={previewUsesInvertedTone}
+        previewBrandColor={previewBrandColor}
+        previewCompanyColor={previewCompanyColor}
+        previewTextColor={previewTextColor}
+        previewNavBackground={previewNavBackground}
+        previewNavBorder={previewNavBorder}
+        previewSecondaryDark={previewSecondaryDark}
+        companyName={company?.name || 'Your Company'}
+        userName={user?.name || 'User Name'}
+        userRole={user?.role || 'USER'}
+      />
+      ```
+
+      ### Important constraints:
+      - Keep ALL existing `data-testid` attributes (tests may depend on them)
+      - Preserve exact visual output — this is a refactor, not a redesign
+      - Dynamic runtime values (theme colors, rgba computations, cover photo URL) MUST remain
+        as inline styles — they cannot use Tailwind classes
+      - Do NOT change any logic outside the theme preview section of CompanySettings
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/05-extract-theme-preview-component: extract ThemePreview component from CompanySettings`
+
+    verify:
+      - "test -f frontend/src/components/settings/ThemePreview.tsx"
+      - "grep -q 'ThemePreview' frontend/src/pages/CompanySettings.tsx"
+      - "grep -q 'useMemo' frontend/src/components/settings/ThemePreview.tsx"
+      - "grep -q 'data-testid=\"theme-preview\"' frontend/src/components/settings/ThemePreview.tsx"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Final step — always last
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "06-final-verify"
+    title: "Final verification: type-check clean, update audit report"
+    prompt: |
+      Run the complete verification suite for this project:
+
+      ```bash
+      cd backend && npx tsc --noEmit 2>&1 | tail -20
+      cd ../frontend && npx tsc --noEmit 2>&1 | tail -20
+      ```
+
+      Fix any remaining issues introduced during this audit run.
+
+      Then update `AUDIT_REPORT.md` at the project root. Add a new section at the end:
+
+      ```markdown
+      ---
+
+      ## Audit V2 — Follow-up Fixes (2026-02-27)
+
+      ### Issues resolved from V1 remaining list:
+
+      1. **NotificationSettings.tsx type error (line 201) — FIXED**
+         Added `EditableNotificationKey` utility type to narrow `editableKeys` typing.
+         Frontend `tsc --noEmit` now passes cleanly.
+
+      2. **eventStore/restaurantStore dead code — FIXED**
+         Removed entirely. Both stores were unused in application code (only referenced in
+         their own test files). App correctly uses TanStack Query for server data.
+
+      3. **Remaining relative imports in store files — FIXED**
+         Migrated `authStore.ts` imports to `@/` path alias.
+         [Include any additional files found and fixed]
+
+      4. **CompanySettings.tsx hardcoded hex colors — FIXED**
+         Replaced `#e2e8f0`, `#f8fafc`, `#0f172a`, `rgb(71 85 105)` with Tailwind utility
+         classes (`text-slate-200`, `text-slate-50`, `text-slate-900`, `text-slate-500`).
+
+      5. **CompanySettings.tsx inline styles — PARTIALLY FIXED**
+         Extracted theme preview into `ThemePreview` component with memoized style objects.
+         Dynamic runtime values (theme colors, rgba computations) remain as inline styles
+         (justified — cannot use Tailwind for dynamic values).
+
+      ### Issues NOT addressed (accepted patterns):
+
+      - **authStore directly calls apiClient** — Accepted pattern for auth flows. The auth
+        store needs direct API access for token refresh, login, and logout which are
+        bootstrapping operations that run before React Query is available.
+
+      - **~20 component files with relative imports** — After V1 and V2 fixes, remaining
+        relative imports are in `components/ui/` (shadcn/ui convention) and deep component
+        files. Lower priority.
+
+      ### Final verification status:
+
+      | Check | Status | Notes |
+      |-------|--------|-------|
+      | Backend `tsc --noEmit` | [RESULT] | |
+      | Frontend `tsc --noEmit` | [RESULT] | |
+      ```
+
+      Fill in [RESULT] with actual results from the verification commands above.
+
+    verify:
+      - "cd backend && npx tsc --noEmit"
+      - "cd frontend && npx tsc --noEmit"
+      - "grep -q 'Audit V2' AUDIT_REPORT.md"
+
+metadata:
+  tags:
+    - "audit"
+    - "guardrails"
+    - "lunchsync"
+    - "typescript"
+    - "react"
+    - "follow-up"
+  created_at: "2026-02-27T00:00:00Z"
+  source_instructions: ".claude/INSTRUCTIONS.md"
+  depends_on: "lunchsync-audit-v1.yaml"

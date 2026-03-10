@@ -1,0 +1,918 @@
+schema_version: "promptbook/v1"
+name: "lunchsync-audit"
+version: "1.0.0"
+description: >
+  Automated audit and fix promptbook for LunchSync.
+  Generated from .claude/INSTRUCTIONS.md audit on 2026-02-27.
+  Covers: Security & Privacy, Observability & Reliability, Architecture & Modularity,
+  Design System Governance, Performance & Scalability, Cognitive Load.
+  Total violations found: 112 (7 CRITICAL, 90 HIGH, 15 QUALITY).
+
+defaults:
+  agent: "claude"
+  workspace_dir: "."
+  approval_mode: "auto"
+  timeout_minutes: 60
+
+global_rules:
+  - "Work in the repository at the workspace_dir passed at runtime."
+  - "Read .claude/INSTRUCTIONS.md before starting any step — it is your law."
+  - "After each step: run the verification commands and ensure all pass before moving on."
+  - "Commit after each step with message 'audit/<step-id>: <step-title>'."
+  - "Do NOT break existing passing tests. If a test becomes stale due to your fix, update it."
+  - "Keep changes minimal and focused on the step's stated goal. No scope creep."
+  - "If a verification command fails, fix the root cause — do NOT modify the verification command."
+  - "Do NOT add new dependencies unless the step explicitly requires it."
+  - "Every Prisma query in controllers MUST include companyId in the where clause."
+  - "Always use { logger } from '../utils/logger' — never raw console.log/error/warn in backend."
+  - "API success responses use { data: ... } wrapper. Error responses use { message: '...' }."
+  - "Frontend interactive elements use shadcn/ui components from @/components/ui/, not raw HTML."
+
+steps:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Step 0 — Orientation (always first, always read-only)
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "00-orientation"
+    title: "Read project instructions and confirm baseline checks"
+    agent: "claude"
+    prompt: |
+      Read `.claude/INSTRUCTIONS.md` in full. Do not modify any files.
+
+      Then run the following baseline checks and report results:
+
+      ```bash
+      cd frontend && npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 2>&1 | tail -20
+      cd ../backend && npx tsc --noEmit 2>&1 | tail -20
+      cd ../frontend && npx tsc --noEmit 2>&1 | tail -20
+      ```
+
+      Produce a brief report:
+      - Current lint errors: <count and summary>
+      - Current type errors: <count and summary>
+      - Confirmation that you have read INSTRUCTIONS.md
+
+      This is a read-only step. Save nothing.
+    verify:
+      - "test -f .claude/INSTRUCTIONS.md"
+      - "echo 'orientation complete'"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # CRITICAL — Step 1: Error handling gaps in push + analytics controllers
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "01-critical-error-handling"
+    title: "Add try/catch to unprotected async controllers"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 6 (Observability & Reliability): "Every controller function
+      must either use try/catch or let errors propagate to the global handler."
+      Three controller handlers have NO try/catch at all. If any Prisma query fails, the error
+      will be unhandled and crash the process.
+
+      ## Violations found
+
+      **File:** `backend/src/modules/notifications/analytics.controller.ts` (lines 5-49)
+      **Problem:** The entire `getNotificationAnalyticsSummary` async handler has zero try/catch.
+      ```typescript
+      export const getNotificationAnalyticsSummary = async (req: AuthRequest, res: Response) => {
+        if (!req.user) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+        const companyId = req.user.companyId;
+        const [...] = await Promise.all([...]); // No try/catch!
+        return res.json({ data: { ... } });
+      };
+      ```
+      **Rule violated:** Observability & Reliability — error handling (CRITICAL)
+
+      **File:** `backend/src/modules/notifications/push.controller.ts` (lines 53-91)
+      **Problem:** `registerPushSubscription` has no try/catch around the Prisma upsert.
+      ```typescript
+      export const registerPushSubscription = async (req: AuthRequest, res: Response) => {
+        // ...validation checks...
+        const subscription = await prisma.pushSubscription.upsert({...}); // No try/catch!
+        return res.status(201).json({ data: {...} });
+      };
+      ```
+
+      **File:** `backend/src/modules/notifications/push.controller.ts` (lines 93-112)
+      **Problem:** `deletePushSubscription` has no try/catch around the Prisma deleteMany.
+      ```typescript
+      export const deletePushSubscription = async (req: AuthRequest, res: Response) => {
+        // ...validation checks...
+        await prisma.pushSubscription.deleteMany({...}); // No try/catch!
+        return res.status(204).send();
+      };
+      ```
+
+      ## Fix required
+
+      ### File: `backend/src/modules/notifications/analytics.controller.ts`
+
+      Wrap the body of `getNotificationAnalyticsSummary` (everything after the auth check)
+      in a try/catch block. In the catch block, use `logger.error(...)` (not console.error)
+      and return `res.status(500).json({ message: 'Failed to fetch analytics summary' })`.
+
+      Also fix line 7: change `{ error: 'Unauthorized' }` to `{ message: 'Unauthorized' }`
+      for API response consistency.
+
+      Add import at top: `import { logger } from '../../utils/logger';`
+
+      ### File: `backend/src/modules/notifications/push.controller.ts`
+
+      Wrap the body of `registerPushSubscription` (after the validation/auth checks,
+      starting from the `prisma.pushSubscription.upsert` call at line 64) in try/catch.
+      In the catch: `logger.error('Error registering push subscription:', error);`
+      then `return res.status(500).json({ message: 'Failed to register push subscription' });`
+
+      Wrap the body of `deletePushSubscription` (after the validation/auth checks,
+      starting from the `prisma.pushSubscription.deleteMany` call at line 104) in try/catch.
+      In the catch: `logger.error('Error deleting push subscription:', error);`
+      then `return res.status(500).json({ message: 'Failed to delete push subscription' });`
+
+      Also replace the existing `console.error` calls on lines 24 and 48 with `logger.error`.
+      Add import at top: `import { logger } from '../../utils/logger';`
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/01-critical-error-handling: add try/catch to unprotected async controllers`
+
+    verify:
+      - "grep -q 'try' backend/src/modules/notifications/analytics.controller.ts"
+      - "grep -q 'catch' backend/src/modules/notifications/analytics.controller.ts"
+      - "grep -q 'try' backend/src/modules/notifications/push.controller.ts"
+      - "! grep -n 'console\\.' backend/src/modules/notifications/analytics.controller.ts"
+      - "! grep -n 'console\\.' backend/src/modules/notifications/push.controller.ts"
+      - "cd backend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # CRITICAL — Step 2: Multi-tenancy violation in orders controller (menu item lookup)
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "02-critical-tenancy-menu-items"
+    title: "Add company scoping to menu item validation in orders controller"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 2 (Security & Privacy — Multi-tenancy CRITICAL):
+      "Every database query MUST filter by companyId." A user can currently reference
+      menu items from another company's restaurant when placing an order.
+
+      ## Violations found
+
+      **File:** `backend/src/modules/orders/orders.controller.ts` (lines 96-105)
+      **Problem:** Menu item validation fetches by ID with no company scoping:
+      ```typescript
+      for (const item of orderItems) {
+        const menuItem = await prisma.menuItem.findUnique({
+          where: { id: item.menuItemId },
+        });
+        if (!menuItem) {
+          return res.status(404).json({ message: `Menu item not found: ${item.menuItemId}` });
+        }
+      }
+      ```
+      A malicious user could submit a menuItemId belonging to a different company's restaurant.
+      **Rule violated:** Security & Privacy — Multi-tenancy (CRITICAL)
+
+      ## Fix required
+
+      ### File: `backend/src/modules/orders/orders.controller.ts`
+
+      Replace the menu item lookup (lines ~96-105) to verify that each menu item belongs to
+      a restaurant owned by the user's company. Change from `findUnique` to `findFirst` with
+      a join through the restaurant to the company:
+
+      ```typescript
+      for (const item of orderItems) {
+        const menuItem = await prisma.menuItem.findFirst({
+          where: {
+            id: item.menuItemId,
+            restaurant: { companyId: req.user!.companyId },
+          },
+        });
+        if (!menuItem) {
+          return res.status(404).json({ message: `Menu item not found: ${item.menuItemId}` });
+        }
+      }
+      ```
+
+      This ensures menu items are scoped to the user's company via the restaurant relation.
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/02-critical-tenancy-menu-items: add company scoping to menu item validation`
+
+    verify:
+      - "grep -q 'companyId' backend/src/modules/orders/orders.controller.ts"
+      - "grep -q 'restaurant.*companyId\\|companyId.*restaurant' backend/src/modules/orders/orders.controller.ts"
+      - "! grep -n 'menuItem.findUnique' backend/src/modules/orders/orders.controller.ts"
+      - "cd backend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # CRITICAL — Step 3: Missing validation on user creation and password change
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "03-critical-missing-validation"
+    title: "Add Zod validation to unprotected user and notification routes"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 2 (Security & Privacy): "Every route that accepts user input
+      MUST use the `validate()` middleware." Multiple POST/PUT routes accept request bodies
+      without any Zod validation.
+
+      ## Violations found
+
+      **File:** `backend/src/modules/users/users.routes.ts`
+      **Lines 43, 45, 47:**
+      ```typescript
+      router.post('/', createUser);              // No validate() — accepts email, password, name, role
+      router.put('/:id', updateUser);            // No validate() — accepts name, role
+      router.put('/:id/password', updateUserPassword); // No validate() — accepts currentPassword, newPassword
+      ```
+
+      **File:** `backend/src/modules/notifications/notifications.routes.ts`
+      **Lines 31, 32, 37:**
+      ```typescript
+      router.post('/push-subscriptions', registerPushSubscription);  // No validate()
+      router.delete('/push-subscriptions', deletePushSubscription);  // No validate()
+      router.put('/settings', updateNotificationSettings);           // No validate()
+      ```
+
+      ## Fix required
+
+      ### File: `backend/src/modules/users/users.validation.ts`
+
+      Add three new Zod schemas to the existing validation file:
+
+      ```typescript
+      import { z } from 'zod';
+
+      // Add these schemas (keep existing ones intact):
+
+      export const createUserSchema = z.object({
+        body: z.object({
+          email: z.string().email(),
+          password: z.string().min(8),
+          name: z.string().min(1).max(100),
+          role: z.enum(['ADMIN', 'MANAGER', 'USER']).optional(),
+        }),
+      });
+
+      export const updateUserSchema = z.object({
+        params: z.object({
+          id: z.string().min(1),
+        }),
+        body: z.object({
+          name: z.string().min(1).max(100).optional(),
+          role: z.enum(['ADMIN', 'MANAGER', 'USER']).optional(),
+        }),
+      });
+
+      export const updateUserPasswordSchema = z.object({
+        params: z.object({
+          id: z.string().min(1),
+        }),
+        body: z.object({
+          currentPassword: z.string().min(1),
+          newPassword: z.string().min(8),
+        }),
+      });
+      ```
+
+      ### File: `backend/src/modules/users/users.routes.ts`
+
+      Import the new schemas and add `validate()` middleware:
+      ```typescript
+      import {
+        updateProfileSchema,
+        changePasswordSchema,
+        updateCompanySchema,
+        createUserSchema,
+        updateUserSchema,
+        updateUserPasswordSchema,
+      } from './users.validation';
+      ```
+
+      Update the three routes:
+      ```typescript
+      router.post('/', validate(createUserSchema), createUser);
+      router.put('/:id', validate(updateUserSchema), updateUser);
+      router.put('/:id/password', validate(updateUserPasswordSchema), updateUserPassword);
+      ```
+
+      ### File: `backend/src/modules/notifications/notifications.validation.ts`
+
+      Create this new file with schemas for push subscription and settings routes:
+
+      ```typescript
+      import { z } from 'zod';
+
+      export const registerPushSubscriptionSchema = z.object({
+        body: z.object({
+          endpoint: z.string().url(),
+          keys: z.object({
+            p256dh: z.string().min(1),
+            auth: z.string().min(1),
+          }),
+          expirationTime: z.number().nullable().optional(),
+          userAgent: z.string().optional(),
+        }),
+      });
+
+      export const deletePushSubscriptionSchema = z.object({
+        body: z.object({
+          endpoint: z.string().url(),
+        }),
+      });
+
+      export const updateNotificationSettingsSchema = z.object({
+        body: z.object({
+          emailEnabled: z.boolean().optional(),
+          emailNotifications: z.boolean().optional(),
+          inAppEnabled: z.boolean().optional(),
+          inAppNotifications: z.boolean().optional(),
+          notifyOnEventCreated: z.boolean().optional(),
+          notifyOnOrderPlaced: z.boolean().optional(),
+          notifyOnDeadlineApproaching: z.boolean().optional(),
+          notifyOnEventClosed: z.boolean().optional(),
+          notifyOnPaymentConfirmed: z.boolean().optional(),
+          notifyOnEventCompleted: z.boolean().optional(),
+        }),
+      });
+      ```
+
+      ### File: `backend/src/modules/notifications/notifications.routes.ts`
+
+      Import validation middleware and schemas, then update the three routes:
+      ```typescript
+      import { validate } from '../../middleware/validation';
+      import {
+        registerPushSubscriptionSchema,
+        deletePushSubscriptionSchema,
+        updateNotificationSettingsSchema,
+      } from './notifications.validation';
+
+      // Update these lines:
+      router.post('/push-subscriptions', validate(registerPushSubscriptionSchema), registerPushSubscription);
+      router.delete('/push-subscriptions', validate(deletePushSubscriptionSchema), deletePushSubscription);
+      router.put('/settings', validate(updateNotificationSettingsSchema), updateNotificationSettings);
+      ```
+
+      ## After fixing
+      Run verification commands and confirm all pass.
+      Commit with message: `audit/03-critical-missing-validation: add Zod validation to unprotected routes`
+
+    verify:
+      - "grep -q 'validate' backend/src/modules/users/users.routes.ts"
+      - "grep -q 'createUserSchema' backend/src/modules/users/users.routes.ts"
+      - "grep -q 'updateUserPasswordSchema' backend/src/modules/users/users.routes.ts"
+      - "test -f backend/src/modules/notifications/notifications.validation.ts"
+      - "grep -q 'validate' backend/src/modules/notifications/notifications.routes.ts"
+      - "cd backend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 4: Replace console.error with logger across all backend controllers
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "04-high-logger-events-orders"
+    title: "Replace console.error with logger in events and orders controllers"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 6 (Observability & Reliability): "Import { logger } from
+      '../utils/logger'. Never use raw console.log/error/warn in backend production code."
+
+      ## Violations found
+
+      **File:** `backend/src/modules/events/events.controller.ts`
+      Contains 10 instances of `console.error(...)` at lines 49, 117, 199, 302, 345, 407,
+      503, 580, 626, 702. None use the project logger.
+
+      **File:** `backend/src/modules/orders/orders.controller.ts`
+      Contains 5 instances of `console.error(...)` at lines 47, 222, 262, 327, 372.
+
+      ## Fix required
+
+      ### File: `backend/src/modules/events/events.controller.ts`
+
+      1. Add at top of file (with other imports):
+         `import { logger } from '../../utils/logger';`
+      2. Find-and-replace all `console.error(` with `logger.error(` throughout the file.
+         There are 10 occurrences. Each should become `logger.error('...', error);`
+
+      ### File: `backend/src/modules/orders/orders.controller.ts`
+
+      1. Add at top of file (with other imports):
+         `import { logger } from '../../utils/logger';`
+      2. Find-and-replace all `console.error(` with `logger.error(` throughout the file.
+         There are 5 occurrences.
+
+      ## After fixing
+      Commit with message: `audit/04-high-logger-events-orders: replace console.error with logger`
+
+    verify:
+      - "! grep -n 'console\\.' backend/src/modules/events/events.controller.ts"
+      - "! grep -n 'console\\.' backend/src/modules/orders/orders.controller.ts"
+      - "grep -q 'import.*logger' backend/src/modules/events/events.controller.ts"
+      - "grep -q 'import.*logger' backend/src/modules/orders/orders.controller.ts"
+      - "cd backend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 5: Replace console.error with logger in remaining backend files
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "05-high-logger-remaining"
+    title: "Replace console.error with logger in all remaining backend controllers and services"
+    prompt: |
+      ## Context
+      Same rule as step 04. The remaining backend files still use raw console.error/log/warn
+      instead of the project logger.
+
+      ## Violations found
+
+      The following files all use `console.error(` or `console.log(` or `console.warn(`:
+
+      1. `backend/src/modules/auth/auth.controller.ts` — 4 instances of `console.error`
+      2. `backend/src/modules/users/users.controller.ts` — 13 instances of `console.error`
+      3. `backend/src/modules/restaurants/restaurants.controller.ts` — 9 instances of `console.error`
+      4. `backend/src/modules/notifications/notifications.controller.ts` — 6 instances of `console.error`
+      5. `backend/src/modules/theme/theme.controller.ts` — 3 instances of `console.error`
+      6. `backend/src/modules/theme/theme.service.ts` — 1 `console.error`, 1 `console.warn`
+      7. `backend/src/modules/invites/invites.controller.ts` — 3 instances of `console.error`
+      8. `backend/src/modules/invites/invite.service.ts` — 1 instance of `console.error`
+      9. `backend/src/realtime/notifications.gateway.server.ts` — 3 instances of `console.log`
+      10. `backend/src/realtime/notifications.dispatcher.ts` — 2 instances of `console.log`
+
+      ## Fix required
+
+      For EACH file above:
+      1. Add `import { logger } from '../../utils/logger';` (or correct relative path) at the top,
+         if not already imported.
+      2. Replace every `console.error(` with `logger.error(`
+      3. Replace every `console.log(` with `logger.info(`
+      4. Replace every `console.warn(` with `logger.warn(`
+
+      Do NOT modify files inside `__tests__/`, `test/`, or `backend/src/utils/logger.ts`.
+
+      ## After fixing
+      Commit with message: `audit/05-high-logger-remaining: replace console with logger in all backend files`
+
+    verify:
+      - "! grep -rn 'console\\.' backend/src/modules/ --include='*.ts' | grep -v '__tests__' | grep -v 'test/' | grep -v '.test.ts'"
+      - "! grep -rn 'console\\.' backend/src/realtime/ --include='*.ts' | grep -v '__tests__' | grep -v '.test.ts'"
+      - "cd backend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 6: Standardize error response format across backend
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "06-high-response-format"
+    title: "Standardize error responses to use { message } instead of { error }"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 6: "Error response format: { message: '...' } for user-facing
+      errors." The codebase is inconsistent — the auth middleware and some controllers use
+      `{ error: '...' }` while others use `{ message: '...' }`. Standardize on `{ message }`.
+
+      ## Violations found
+
+      **File:** `backend/src/middleware/auth.ts`
+      Lines 18, 35, 46, 56 all use `{ error: '...' }`:
+      ```typescript
+      return res.status(401).json({ error: 'No token provided' });
+      return res.status(401).json({ error: 'Account no longer exists' });
+      return res.status(401).json({ error: 'Invalid or expired token' });
+      return res.status(403).json({ error: 'Admin access required' });
+      ```
+
+      **File:** `backend/src/modules/notifications/analytics.controller.ts`
+      Line 7: `{ error: 'Unauthorized' }` (if not already fixed in step 01)
+
+      **File:** `backend/src/modules/invites/invites.controller.ts`
+      Lines 45, 58: `{ error: 'INVITE_CREATION_FAILED' }`, `{ error: 'INVITE_LIST_FAILED' }`
+
+      ## Fix required
+
+      ### File: `backend/src/middleware/auth.ts`
+      Replace all four error responses:
+      - Line 18: `{ error: 'No token provided' }` → `{ message: 'No token provided' }`
+      - Line 35: `{ error: 'Account no longer exists' }` → `{ message: 'Account no longer exists' }`
+      - Line 46: `{ error: 'Invalid or expired token' }` → `{ message: 'Invalid or expired token' }`
+      - Line 56: `{ error: 'Admin access required' }` → `{ message: 'Admin access required' }`
+
+      ### File: `backend/src/modules/invites/invites.controller.ts`
+      Replace error responses that use `{ error }` with `{ message }`:
+      - `{ error: 'INVITE_CREATION_FAILED' }` → `{ message: 'Failed to create invite' }`
+      - `{ error: 'INVITE_LIST_FAILED' }` → `{ message: 'Failed to list invites' }`
+      - For lines where both `error` and `message` are returned (e.g., `{ error: error.code, message: error.message }`),
+        keep only `{ message: error.message }` and optionally add `code: error.code` for machine readability.
+
+      ### File: `backend/src/middleware/error.ts`
+      The global error handler on lines 14, 21, 28 returns `{ error: '...' }`. Change to `{ message: '...' }`:
+      - Line 14-17: `{ error: 'Validation error', details: err.errors }` → `{ message: 'Validation error', details: err.errors }`
+      - Line 21: `{ error: 'Invalid token' }` → `{ message: 'Invalid token' }`
+      - Line 25: `{ error: 'Token expired' }` → `{ message: 'Token expired' }`
+      - Lines 28-30: `{ error: 'Internal server error', message: ... }` → `{ message: 'Internal server error' }`
+        (remove the conditional debug message or move it to a `details` field only in dev)
+
+      IMPORTANT: Changing auth middleware responses may break frontend error handling.
+      Check `frontend/src/lib/api/client.ts` — the interceptor checks for `response?.status === 401`
+      (status code), not the response body field name, so this change is safe for the token refresh logic.
+
+      ## After fixing
+      Commit with message: `audit/06-high-response-format: standardize error responses to { message }`
+
+    verify:
+      - "! grep -n '{ error:' backend/src/middleware/auth.ts"
+      - "! grep -n '{ error:' backend/src/middleware/error.ts"
+      - "grep -q '{ message:' backend/src/middleware/auth.ts"
+      - "cd backend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 7: Replace raw <button> with <Button> across frontend
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "07-high-raw-buttons-batch1"
+    title: "Replace raw <button> with shadcn/ui <Button> in dialog close buttons"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 7 (Design System Governance): "No raw `<button>` — use
+      `<Button>` from `@/components/ui/button`." There are 15 raw `<button>` elements across
+      11 frontend component files. This step fixes the most common pattern: close buttons
+      using the X icon.
+
+      ## Violations found — Close button pattern
+
+      The following files all have a raw `<button>` with an X icon for closing dialogs/modals:
+
+      1. `frontend/src/pages/Orders.tsx` (~line 228)
+      2. `frontend/src/components/settings/ChangePasswordDialog.tsx` (~line 91)
+      3. `frontend/src/components/features/OrderModal.tsx` (~line 114)
+      4. `frontend/src/components/features/CreateEventDialog.tsx` (~line 99)
+      5. `frontend/src/components/events/EditEventDialog.tsx` (~line 116)
+      6. `frontend/src/components/events/EventDetailsModal.tsx` (~line 103)
+      7. `frontend/src/components/notifications/NotificationToast.tsx` (~line 180)
+      8. `frontend/src/components/notifications/PushPermissionModal.tsx` (~line 44)
+
+      Each uses a pattern like:
+      ```tsx
+      <button
+        onClick={onClose}
+        className="rounded-sm opacity-70 hover:opacity-100"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      ```
+
+      ## Fix required
+
+      For EACH file listed above:
+
+      1. Ensure `Button` is imported: `import { Button } from '@/components/ui/button';`
+         (use @/ path alias, not relative imports)
+      2. Replace the raw `<button>` with `<Button variant="ghost" size="icon">`:
+
+      ```tsx
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClose}
+        className="rounded-sm opacity-70 hover:opacity-100"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </Button>
+      ```
+
+      Preserve the existing `onClick` handler, `className`, and any `aria-label` from each file.
+      Add `aria-label="Close"` if not already present.
+      Add `aria-label="Dismiss notification"` for the NotificationToast instance.
+
+      ## After fixing
+      Commit with message: `audit/07-high-raw-buttons-batch1: replace raw close buttons with Button component`
+
+    verify:
+      - "! grep -n '<button' frontend/src/pages/Orders.tsx"
+      - "! grep -n '<button' frontend/src/components/settings/ChangePasswordDialog.tsx"
+      - "! grep -n '<button' frontend/src/components/features/OrderModal.tsx"
+      - "! grep -n '<button' frontend/src/components/features/CreateEventDialog.tsx"
+      - "! grep -n '<button' frontend/src/components/events/EditEventDialog.tsx"
+      - "! grep -n '<button' frontend/src/components/events/EventDetailsModal.tsx"
+      - "! grep -n '<button' frontend/src/components/notifications/NotificationToast.tsx"
+      - "! grep -n '<button' frontend/src/components/notifications/PushPermissionModal.tsx"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 8: Replace raw <button> in notification components
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "08-high-raw-buttons-batch2"
+    title: "Replace raw <button> with <Button> in notification components"
+    prompt: |
+      ## Context
+      Same rule as step 07. The remaining raw `<button>` elements are in notification components
+      used for filter tabs, channel pills, and the notification bell.
+
+      ## Violations found
+
+      **File:** `frontend/src/components/notifications/NotificationList.tsx` (~lines 322-341)
+      Two raw `<button>` elements used as filter tabs ("All" and "Unread"):
+      ```tsx
+      <button
+        onClick={() => setFilter('all')}
+        className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${...}`}
+      >
+        All
+      </button>
+      ```
+
+      **File:** `frontend/src/components/notifications/NotificationBell.tsx` (~lines 155, 218)
+      Raw `<button>` for the bell trigger and notification items in the dropdown.
+
+      **File:** `frontend/src/components/notifications/NotificationAnalyticsPanel.tsx` (~lines 91-112)
+      Raw `<button>` elements for channel filter pills ("All Channels", individual channels).
+
+      ## Fix required
+
+      ### File: `frontend/src/components/notifications/NotificationList.tsx`
+      Import `{ Button }` from `@/components/ui/button`.
+      Replace the two filter tab `<button>` elements with:
+      ```tsx
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setFilter('all')}
+        className={`px-4 py-2 rounded-none border-b-2 ${...}`}
+      >
+        All
+      </Button>
+      ```
+
+      ### File: `frontend/src/components/notifications/NotificationBell.tsx`
+      Import `{ Button }` from `@/components/ui/button`.
+      Replace the bell trigger `<button>` with `<Button variant="ghost" size="icon" ref={buttonRef} ...>`.
+      Replace the notification item `<button>` elements with `<Button variant="ghost" ...>`.
+      Preserve all existing `aria-label`, `aria-expanded`, `aria-haspopup`, `role` attributes.
+
+      ### File: `frontend/src/components/notifications/NotificationAnalyticsPanel.tsx`
+      Import `{ Button }` from `@/components/ui/button`.
+      Replace all channel filter pill `<button>` elements with `<Button variant="outline" size="sm" ...>`.
+
+      ## After fixing
+      Commit with message: `audit/08-high-raw-buttons-batch2: replace raw buttons in notification components`
+
+    verify:
+      - "! grep -n '<button' frontend/src/components/notifications/NotificationList.tsx"
+      - "! grep -n '<button' frontend/src/components/notifications/NotificationBell.tsx"
+      - "! grep -n '<button' frontend/src/components/notifications/NotificationAnalyticsPanel.tsx"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 9: Replace hardcoded hex colors with Tailwind classes
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "09-high-hardcoded-colors"
+    title: "Replace hardcoded hex colors in Header and MobileNav with Tailwind classes"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 7 (Design System Governance): "No inline style={{ }} with
+      hardcoded values. Use Tailwind classes and design tokens."
+
+      ## Violations found
+
+      **File:** `frontend/src/components/layout/Header.tsx`
+      Lines 142-143 contain hardcoded hex colors for conditional styling:
+      ```tsx
+      <User className="w-5 h-5" aria-hidden="true" style={{ color: useInvertedTone ? '#e2e8f0' : 'rgb(71 85 105)' }} />
+      <span className="text-sm font-medium" style={{ color: useInvertedTone ? '#f8fafc' : undefined }}>
+      ```
+      These are Tailwind slate colors: `#e2e8f0` = `slate-200`, `rgb(71 85 105)` = `slate-500`, `#f8fafc` = `slate-50`.
+
+      Lines 149-151 have more hardcoded colors:
+      ```tsx
+      style={{
+        background: theme.secondaryColor,
+        color: isSecondaryDark ? '#f8fafc' : '#0f172a',
+      }}
+      ```
+      `#f8fafc` = `slate-50`, `#0f172a` = `slate-900`.
+
+      **File:** `frontend/src/components/layout/MobileNav.tsx`
+      Lines 44-47:
+      ```tsx
+      style={{
+        backgroundColor: '#ffffff',
+        opacity: 1,
+      }}
+      ```
+      `#ffffff` = `bg-white`.
+
+      ## Fix required
+
+      ### File: `frontend/src/components/layout/Header.tsx`
+
+      For the User icon and span (lines ~142-143), replace inline `style` with conditional
+      Tailwind classes using `cn()`:
+      ```tsx
+      <User className={cn("w-5 h-5", useInvertedTone ? "text-slate-200" : "text-slate-500")} aria-hidden="true" />
+      <span className={cn("text-sm font-medium", useInvertedTone && "text-slate-50")}>
+      ```
+
+      For the theme-dependent styling (lines ~149-151), the `background: theme.secondaryColor`
+      must remain as inline style since it's a dynamic runtime value from the theme. However,
+      replace the hardcoded text colors with Tailwind:
+      ```tsx
+      style={{ background: theme.secondaryColor }}
+      className={cn("...", isSecondaryDark ? "text-slate-50" : "text-slate-900")}
+      ```
+
+      ### File: `frontend/src/components/layout/MobileNav.tsx`
+
+      Replace the inline style with Tailwind classes:
+      ```tsx
+      // Remove: style={{ backgroundColor: '#ffffff', opacity: 1 }}
+      // Add to className: "bg-white opacity-100"
+      ```
+
+      ## After fixing
+      Commit with message: `audit/09-high-hardcoded-colors: replace hardcoded hex colors with Tailwind classes`
+
+    verify:
+      - "! grep -n '#e2e8f0' frontend/src/components/layout/Header.tsx"
+      - "! grep -n '#ffffff' frontend/src/components/layout/MobileNav.tsx"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # HIGH — Step 10: Remove console.error from frontend production components
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "10-high-frontend-console"
+    title: "Remove console.error/warn from frontend production components"
+    prompt: |
+      ## Context
+      While INSTRUCTIONS.md primarily targets backend console usage, the project's quality
+      standards discourage raw console calls in production code. Frontend error handling should
+      use the TanStack Query `onError` callbacks or toast notifications, not console.error.
+
+      ## Violations found
+
+      16 `console.error` / `console.warn` calls across 12 frontend files (excluding test files):
+
+      1. `frontend/src/pages/EventDetail.tsx` — 5x `console.error('Failed to ...')`
+      2. `frontend/src/pages/Restaurants.tsx` — 1x `console.error`
+      3. `frontend/src/components/menu/AddMenuItemDialog.tsx` — 1x `console.error`
+      4. `frontend/src/components/menu/EditMenuItemDialog.tsx` — 1x `console.error`
+      5. `frontend/src/components/features/OrderModal.tsx` — 1x `console.error`
+      6. `frontend/src/components/features/CreateEventDialog.tsx` — 1x `console.error`
+      7. `frontend/src/components/events/EditEventDialog.tsx` — 1x `console.error`
+      8. `frontend/src/components/features/AddRestaurantDialog.tsx` — 1x `console.error`
+      9. `frontend/src/components/restaurants/EditRestaurantDialog.tsx` — 1x `console.error`
+      10. `frontend/src/components/error/ErrorBoundary.tsx` — 1x `console.error`
+      11. `frontend/src/lib/push/push-manager.ts` — 2x `console.warn`
+      12. `frontend/src/main.tsx` — 1x `console.warn`
+
+      ## Fix required
+
+      For files 1-9 (component error handlers):
+      These are in mutation `onError` callbacks. The error is already surfaced to the user via
+      toast/error state. Simply **remove** the `console.error` line — the error is not lost since
+      TanStack Query captures it. If there's meaningful error state being set alongside the
+      console.error, keep the state setting and only remove the console line.
+
+      For `ErrorBoundary.tsx` (file 10):
+      Keep the `console.error` here — ErrorBoundary is a last-resort catch and logging to console
+      is appropriate for development debugging. However, add an eslint-disable comment:
+      ```typescript
+      // eslint-disable-next-line no-console
+      console.error('Error caught by boundary:', error, errorInfo);
+      ```
+
+      For `push-manager.ts` (file 11):
+      Replace `console.warn(...)` with nothing — these are non-critical warnings about push
+      subscription cleanup that don't need logging. Remove both lines.
+
+      For `main.tsx` (file 12):
+      This is service worker registration failure — keep but add eslint-disable comment:
+      ```typescript
+      // eslint-disable-next-line no-console
+      console.warn('Service worker registration failed', error);
+      ```
+
+      ## After fixing
+      Commit with message: `audit/10-high-frontend-console: remove console.error from production components`
+
+    verify:
+      - "! grep -n 'console\\.' frontend/src/pages/EventDetail.tsx"
+      - "! grep -n 'console\\.' frontend/src/pages/Restaurants.tsx"
+      - "! grep -n 'console\\.' frontend/src/components/features/OrderModal.tsx"
+      - "! grep -n 'console\\.' frontend/src/components/features/CreateEventDialog.tsx"
+      - "! grep -n 'console\\.' frontend/src/lib/push/push-manager.ts"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # QUALITY — Step 11: Migrate imports to @/ path alias
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "11-quality-path-alias"
+    title: "Migrate page files from relative imports to @/ path alias"
+    prompt: |
+      ## Context
+      Per INSTRUCTIONS.md Section 1 (Architecture): "Frontend: always use `@/` path alias
+      (e.g., `import { Button } from '@/components/ui/button'`)." The majority of page and
+      component files use relative `../` imports instead of `@/`.
+
+      ## Violations found
+
+      All page files use `../` relative imports instead of `@/`:
+      - `frontend/src/pages/Events.tsx` — 10 relative imports
+      - `frontend/src/pages/Dashboard.tsx` — ~10 relative imports
+      - `frontend/src/pages/EventDetail.tsx` — ~9 relative imports
+      - `frontend/src/pages/Restaurants.tsx` — ~10 relative imports
+      - `frontend/src/pages/Orders.tsx` — ~7 relative imports
+      - `frontend/src/pages/MenuManagement.tsx` — ~9 relative imports
+      - `frontend/src/pages/RestaurantDetails.tsx` — ~8 relative imports
+      - `frontend/src/pages/Login.tsx` — ~5 relative imports
+      - `frontend/src/pages/Register.tsx` — ~5 relative imports
+      - `frontend/src/pages/Settings.tsx` — 1 relative import
+
+      ## Fix required
+
+      For each page file listed above, replace all `../` import paths with `@/` equivalents.
+      The mapping is:
+      - `'../lib/...'` → `'@/lib/...'`
+      - `'../store/...'` → `'@/store/...'`
+      - `'../components/...'` → `'@/components/...'`
+      - `'../types'` → `'@/types'`
+      - `'../types/...'` → `'@/types/...'`
+
+      Example transformation for Events.tsx:
+      ```typescript
+      // Before
+      import { useEvents } from '../lib/api/hooks';
+      import { useAuthStore } from '../store/authStore';
+      import { Card } from '../components/ui/card';
+
+      // After
+      import { useEvents } from '@/lib/api/hooks';
+      import { useAuthStore } from '@/store/authStore';
+      import { Card } from '@/components/ui/card';
+      ```
+
+      Only modify import statements. Do not change any logic or other code.
+
+      ## After fixing
+      Commit with message: `audit/11-quality-path-alias: migrate page imports to @/ path alias`
+
+    verify:
+      - "! grep -n \"from '\\.\\.\" frontend/src/pages/Events.tsx"
+      - "! grep -n \"from '\\.\\.\" frontend/src/pages/Dashboard.tsx"
+      - "! grep -n \"from '\\.\\.\" frontend/src/pages/EventDetail.tsx"
+      - "! grep -n \"from '\\.\\.\" frontend/src/pages/Restaurants.tsx"
+      - "! grep -n \"from '\\.\\.\" frontend/src/pages/Orders.tsx"
+      - "cd frontend && npx tsc --noEmit"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Final step — always last
+  # ────────────────────────────────────────────────────────────────────────────
+  - id: "12-final-verify"
+    title: "Final verification: full suite green, lint clean, audit summary"
+    prompt: |
+      Run the complete verification suite for this project:
+
+      ```bash
+      cd frontend && npx tsc --noEmit
+      cd ../backend && npx tsc --noEmit
+      cd ../frontend && npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 2>&1 | tail -30
+      ```
+
+      Fix any remaining issues introduced during this audit run.
+
+      Then write a file `AUDIT_REPORT.md` at the project root with:
+      - Date of audit: 2026-02-27
+      - Total violations found: 112 (7 CRITICAL, 90 HIGH, 15 QUALITY)
+      - CRITICAL fixes applied:
+        - Added try/catch to analytics.controller.ts and push.controller.ts (3 handlers)
+        - Added companyId scoping to menu item validation in orders.controller.ts
+        - Added Zod validation to 6 unprotected routes (users + notifications)
+      - HIGH fixes applied:
+        - Replaced 63 console.error/log/warn with logger across all backend controllers/services
+        - Standardized error response format to { message } in middleware and controllers
+        - Replaced 15 raw <button> elements with <Button> component across 11 frontend files
+        - Replaced hardcoded hex colors with Tailwind classes in Header and MobileNav
+        - Removed console.error from 9 frontend production components
+      - QUALITY fixes applied:
+        - Migrated 10 page files from relative imports to @/ path alias
+      - Remaining known issues (NOT fixed — too broad for this audit):
+        - ~20 more component files still use relative imports (lower priority)
+        - Inline styles for dynamic theming remain (justified — runtime values from company theme)
+        - authStore directly calls apiClient (borderline — accepted pattern for auth)
+        - eventStore/restaurantStore have unused setEvents/setRestaurants dead code
+        - CompanySettings.tsx has extensive inline styles for theme preview (complex refactor)
+        - Frontend type error in NotificationSettings.tsx line 201 (pre-existing)
+      - Final type-check status: [result from above]
+      - Final lint status: [result from above]
+
+    verify:
+      - "cd backend && npx tsc --noEmit"
+      - "cd frontend && npx tsc --noEmit"
+      - "test -f AUDIT_REPORT.md"
+      - "grep -q 'CRITICAL' AUDIT_REPORT.md"
+
+metadata:
+  tags:
+    - "audit"
+    - "guardrails"
+    - "lunchsync"
+    - "typescript"
+    - "react"
+    - "express"
+  created_at: "2026-02-27T00:00:00Z"
+  source_instructions: ".claude/INSTRUCTIONS.md"
